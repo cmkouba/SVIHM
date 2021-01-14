@@ -31,8 +31,8 @@
 
   INTEGER  :: nmonth, imonth, jday, i, im, ip, nrows, ncols
   INTEGER  :: dummy, nsegs, n_wel_param, num_daily_out, unit_num, num_MAR_fields, alf_irr_stop_mo, alf_irr_stop_day
-  INTEGER, ALLOCATABLE, DIMENSION(:,:) :: zone_matrix, no_flow_matrix, output_zone_matrix
-  REAL, ALLOCATABLE, DIMENSION(:,:) :: ET_Cells_extinction_depth
+  INTEGER, ALLOCATABLE, DIMENSION(:,:) :: zone_matrix, no_flow_matrix, output_zone_matrix, ET_Zone_Cells
+  REAL, ALLOCATABLE, DIMENSION(:,:) :: ET_Cells_ex_depth
   INTEGER, ALLOCATABLE, DIMENSION(:)   :: MAR_fields, ip_daily_out
   REAL   :: precip, Total_Ref_ET, MAR_vol
   REAL, ALLOCATABLE, DIMENSION(:)  :: drain_flow, max_MAR_field_rate, moisture_save, available_instream_flow_ratio
@@ -130,7 +130,8 @@
   ALLOCATE(zone_matrix(nrows,ncols))
   ALLOCATE(no_flow_matrix(nrows,ncols))
   ALLOCATE(output_zone_matrix(nrows,ncols))
-  ALLOCATE(ET_Cells_extinction_depth(nrows,ncols)) 
+  ALLOCATE(ET_Zone_Cells(nrows,ncols))
+  ALLOCATE(ET_Cells_ex_depth(nrows,ncols)) 
   ALLOCATE(drain_flow(nmonth))
   ALLOCATE(ndays(nmonth))
 
@@ -141,13 +142,10 @@
   output_zone_matrix = zone_matrix * no_flow_matrix        ! Create Recharge Zone Matrix with zeros at no flow cells
   open(unit=213, file='SVIHM_SFR_template.txt', status='old')
   read(213,*) dummy,nsegs 
-  open(unit=214,file='ET_Cells_Extinction_Depth.txt',status='old')      ! Read in extinction depths for MODFLOW ET-from-groundwater zones
-  read(214,*) ET_Cells_extinction_depth 
-  !if(landuse_scenario == 'lots_natveg') then                  ! If there are major 
-  !  open(unit=217,file='NatVeg_Outside_DZ_Cells.txt',status='old')   ! Read in MODFLOW ET-from-groundwater zone matrix for Nat Veg outside DZ cells
-  !  read(217,*) ET_Cells_NV                                          ! In changed-land-use scenarios, nat veg areas.
-  !  close(217)
-  !end if
+  open(unit=214,file='ET_Zone_Cells.txt',status='old')      ! Read in 1-0 grid of cells with MODFLOW ET-from-groundwater zones
+  read(214,*) ET_Zone_Cells 
+  open(unit=217,file='ET_Cells_Extinction_Depth.txt',status='old')      ! Read in extinction depths for MODFLOW ET-from-groundwater zones
+  read(217,*) ET_Cells_ex_depth 
 
   open(unit=888, file='stress_period_days.txt', status='old')      ! Read in vector with number of days in each stress period (month)
   read(888, *) ndays   
@@ -156,6 +154,7 @@
   close(212)
   close(213)
   close(214)
+  close(217)
   close(888)
   
   call READ_KC_IRREFF                                ! Read in crop coefficients and irrigation efficiencies
@@ -414,7 +413,7 @@
        call convert_length_to_volume
        call monthly_out_by_field(im)
        call monthly_pumping(im, jday, total_n_wells)
-		   call ET_out_MODFLOW(im,imonth,ndays,nmonth, nrows,ncols,output_zone_matrix,Total_Ref_ET,ET_Cells_extinction_depth,npoly) 
+		   call ET_out_MODFLOW(im,imonth,ndays,nmonth, nrows,ncols,output_zone_matrix,Total_Ref_ET,ET_Zone_Cells,ET_Cells_ex_depth,npoly)
 		   Total_Ref_ET = 0.  ! Reset monthly Average ET
 		   call recharge_out_MODFLOW(im,imonth,ndays, nmonth,nrows,ncols,output_zone_matrix)
        call monthly_volume_out		   
