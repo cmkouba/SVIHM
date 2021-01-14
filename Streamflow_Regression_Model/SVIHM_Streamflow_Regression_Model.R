@@ -18,6 +18,10 @@
 #   setwd(stream_regress_dir)
 # }
 
+# If TRUE: after generating streamflow values from regression, manually copy
+# the values from the calibrated model input into this streamflow input
+match_legacy_streamflow = TRUE 
+
 read_in_flow_data = function(){
   FJ_daily_mean = read.table('USGS_11519500_WY_1942_2018.txt', header = TRUE, stringsAsFactors = F)[-4]   #import daily streamflow data
   East_Fork_daily_mean = read.table('East_Fork_Scott_River_R_input.txt', header = T, stringsAsFactors = F, sep = '\t')[-4]
@@ -386,6 +390,21 @@ generate_streamflow_input_txt = function(end_date = as.Date("2018/9/30")){
   trib_order = c(1:4, 6, 5, 12, 13, 7:11)
   WY1991_2018_Streamflow = WY1991_2018_Streamflow[,trib_order]
   
+  
+  if(match_legacy_streamflow==TRUE){
+    stream_91_11 = read.table("streamflow_input_1991_2011.txt",header=T)
+    
+    # replace values with legacy values
+    # Confirm column names are in the same spot
+    if(sum(colnames(WY1991_2018_Streamflow) == colnames(stream_91_11)) == 13){
+      replace_these_rows = WY1991_2018_Streamflow$Month <= as.Date("2011-09-30")
+      
+      percent_diff = abs(WY1991_2018_Streamflow[replace_these_rows,2:13] - stream_91_11[,2:13]) / stream_91_11[,2:13]
+      avg_percent_diff = apply(X = percent_diff, MARGIN = 2, FUN = mean)
+      
+      WY1991_2018_Streamflow[replace_these_rows,2:13] = stream_91_11[,2:13]
+    }
+  }
   
   # Old table building script
   # WY1991_2018_Streamflow = data.frame(Month = SVIHM_months,
