@@ -1,3 +1,4 @@
+
 #Generate input files for SVIHM
 
 library(lubridate)
@@ -21,19 +22,19 @@ recharge_scenario = "Basecase" # Can be Basecase/MAR/ILR/MAR_ILR
 flow_scenario = "Basecase" # Can be Basecase/Flow_Lims. Flow limits on stream diversion specified in "available ratio" table.
 
 # Irrigation demand: Different from the kc_CROP_mult values in crop_coeff_mult.txt, which is used for calibrating.
-irr_demand_mult = 1 # Can be 1 (Basecase) or < 1 or > 1 (i.e., reduced or increased irrigation; assumes land use change)
+irr_demand_mult = .8 # Can be 1 (Basecase) or < 1 or > 1 (i.e., reduced or increased irrigation; assumes land use change)
 natveg_kc = 0.6 # Default: 0.6. Set at 1.0 for major natveg scenarios. 
 
 # Month and day of the final day of alfalfa irrigation season. 
 # Default is Aug 31, 8/31
 alf_irr_stop_mo = 8 # Month as month of year (7 = July)
-alf_irr_stop_day = 1 
+alf_irr_stop_day = 31 
 # Convert to month of wy (Oct=1, Nov=2, ..., Jul = 10, Aug=11, Sep=0)
 if(alf_irr_stop_mo<9){alf_irr_stop_mo = alf_irr_stop_mo + 3
 }else{alf_irr_stop_mo = alf_irr_stop_mo - 9}
 
 #Land use scenario. 
-landuse_scenario = "Basecase" # Default: Basecase. For attribution study: major_natveg
+landuse_scenario = "Basecase" #"major_natveg" # Default: Basecase. For attribution study: major_natveg
 # landuse_scenario_detail = "native veg, gw and mixed fields, outside adj"
 # landuse_scenario_detail = "native veg outside adj"
 # landuse_scenario_detail = "native veg, gw and mixed fields, inside adj"
@@ -45,14 +46,14 @@ landuse_scenario = "Basecase" # Default: Basecase. For attribution study: major_
 
 # Overall scenario identifier. Also makes the directory name; must match folder
 # scenario_name = "basecase"
-# scenario_name = "mar_ilr" # "ilr" "mar" 
-# scenario_name = "flowlims" #"irrig_0.9" "irrig_0.8
+# scenario_name = "mar_ilr" # "ilr" "mar"
+scenario_name = "irrig_0.8" #"flowlims" "irrig_0.9" "irrig_0.8" 
 # scenario_name = "alf_irr_stop_jul10" 
-scenario_name = "alf_irr_stop_aug01" 
+# scenario_name = "alf_irr_stop_aug01" 
 # scenario_name = "natveg_outside_adj"
 # scenario_name = "natveg_gwmixed_outside_adj"
-# scenario_name = "natveg_inside_adj" 
-# scenario_name = "natveg_gwmixed_inside_adj" 
+# scenario_name = "natveg_inside_adj"
+# scenario_name = "natveg_gwmixed_inside_adj"
 
 
 
@@ -133,10 +134,9 @@ num_stress_periods = length(model_months)
 # well_list_by_polygon.txt
 # well_summary.txt
 
-  copy_these_files = c( "daily_out.txt", #"Discharge_Zone_Cells.txt",
+  copy_these_files = c( "daily_out.txt", 
                         "irr_eff.txt", "MAR_Fields.txt",
                        "No_Flow_SVIHM.txt", "Recharge_Zones_SVIHM.txt",
-                       #"polygons_table.txt", "crop_coeff_mult.txt",
                        "well_list_by_polygon.txt", "well_summary.txt")
 
 if(landuse_scenario %in% c("basecase","Basecase")){ copy_these_files = c(copy_these_files, "polygons_table.txt")}
@@ -146,6 +146,9 @@ if(natveg_kc==0.6){copy_these_files = c(copy_these_files, "crop_coeff_mult.txt")
 setwd(time_indep_dir)
 file.copy(copy_these_files, SWBM_file_dir)
 
+#Copy and rename discharge zone cells
+file.copy(from = file.path(ref_data_dir,"Discharge_Zone_Cells.txt"), 
+          to = file.path(SWBM_file_dir,"ET_Zone_Cells.txt"))
 
 
 # CALIBRATION FILES -------------------------------------------------------
@@ -231,7 +234,7 @@ if( !(landuse_scenario %in% c("basecase","Basecase"))){
       print(paste("polygon number",i,"invalid"))} 
     
     if(gIntersects(adj, field)){
-      overlap_poly = intersect(field, adj)
+      overlap_poly = raster::intersect(field, adj)
       poly$fraction_in_adj[selector] = round(area(overlap_poly) / area(field), digits = 3) # otherwise get leftover digit junk
     }
   }
@@ -249,6 +252,7 @@ if( !(landuse_scenario %in% c("basecase","Basecase"))){
                         fill = T, sep = "\t", colClasses = poly_column_classes)
   colnames(poly_tab) = c("Field_ID",colnames(poly_tab)[2:11])
   
+  poly$wat_source_orig = poly_tab$Water_Source[match(poly$Polynmbr, poly_tab$Field_ID)]
   
   in_adj_threshold = 0.05 # lower numbers mean, just a sliver overlapping are included
   fields_inside_adj = poly$Polynmbr[poly$fraction_in_adj > in_adj_threshold]
@@ -257,6 +261,32 @@ if( !(landuse_scenario %in% c("basecase","Basecase"))){
   
   fields_inside_adj = poly[poly$fraction_in_adj > in_adj_threshold,]
   fields_outside_adj =  poly[poly$fraction_in_adj <= in_adj_threshold,]
+  
+  # # make acreage tables
+  # # make land use color table, associate colors with poly tab land uses (seems the most up to date)
+  # inside_acreage = aggregate(area(fields_inside_adj),
+  #                            by = list(fields_inside_adj$landuse_color,
+  #                                      fields_inside_adj$wat_source_orig), FUN = sum)
+  # colnames(inside_acreage) = c("color","wat_source","m_sq_in")
+  # outside_acreage = aggregate(area(fields_outside_adj),
+  #                             by = list(fields_outside_adj$landuse_color,
+  #                                       fields_outside_adj$wat_source_orig), FUN = sum)
+  # colnames(outside_acreage) = c("color","wat_source","m_sq_out")
+  # acreage1 = expand.grid(color = lu_df$color, wat_source =unique(poly$wat_source_orig))
+  # acreage2 = merge(x = acreage1, y = inside_acreage, by=c("color", "wat_source"), all.x = T)
+  # acreage3 = merge(x = acreage2, y = outside_acreage, by=c("color", "wat_source"), all.x = T)
+  # acreage3$landuse = lu_descrip[match(acreage3$color, lu_color)]
+  # acreage3$wat_source_descrip = wat_source_df$descrip[match(acreage3$wat_source,wat_source_df$ws_code)]
+  # acreage3$acres_in = round(acreage3$m_sq_in / 4046.86)
+  # acreage3$acres_out = round(acreage3$m_sq_out / 4046.86)
+  # acreage = acreage3[,5:8]
+  # write.csv(acreage, "adj_zone_acreage.csv")
+  # 
+  # lu_descrip = c("Alfalfa/Grain","Pasture",
+  #                "ET/No Irrigation","No ET/No Irrigation")
+  # lu_color = c("forestgreen","darkolivegreen2","wheat","red")
+  # poly$landuse_color2b = lu_color[match(poly$LNDU_SIM2b, lu_descrip)]
+  # poly$landuse_color1 = lu_color[match(poly$LNDU_SIM1, lu_descrip)]
   
   # poly_saved = poly
   # # poly = poly_saved
@@ -526,6 +556,10 @@ if( !(landuse_scenario %in% c("basecase","Basecase"))){
   # Assign Discharge Zone cells an extinction depth of 0.5 m
   extinction_depth[dz_cells == 1] = 0.5
   
+  #Make a table of 1s and 0s, 1 indicating ET-from-gw is active in this cell
+  et_zone_cells = extinction_depth
+  et_zone_cells[extinction_depth!=0]=1
+  
   # Save  extinction depth matrix
   write.table(x =extinction_depth, 
               file = file.path(SWBM_file_dir, "ET_Cells_Extinction_Depth.txt"),
@@ -597,6 +631,12 @@ kc_alf_days[(month(model_days) < growing_season_start_month) |
               (month(model_days) == growing_season_end_month & day(model_days) > growing_season_end_day)
             ] = kc_alf_dormant
 
+# Change 8 specific dates to match legacy input
+legacy_0_kc_dates = as.Date(c("1996-11-14","1997-11-14","2004-11-14", "2005-11-14"))
+legacy_0.9_kc_dates = as.Date(c("1997-02-28","1998-02-28","2005-02-28", "2006-02-28"))
+kc_alf_days[model_days %in% legacy_0_kc_dates] = 0
+kc_alf_days[model_days %in% legacy_0.9_kc_dates] = 0.9
+
 #Pad single-digit month, day values with 0s (e.g. "2" becomes "02"), then concatenate date strings
 kc_alfalfa_df = data.frame(kc_alf_days)
 kc_alfalfa_df$day = paste(str_pad(day(model_days), 2, pad = "0"), 
@@ -628,6 +668,13 @@ kc_pas_days[(month(model_days) < growing_season_start_month) |
               (month(model_days) == growing_season_end_month & day(model_days) > growing_season_end_day)
             ] = kc_pas_dormant
 
+# Change 8 specific dates to match legacy input
+legacy_0_kc_dates = as.Date(c("1996-11-14","1997-11-14","2004-11-14", "2005-11-14"))
+legacy_0.9_kc_dates = as.Date(c("1997-02-28","1998-02-28","2005-02-28", "2006-02-28"))
+kc_pas_days[model_days %in% legacy_0_kc_dates] = 0
+kc_pas_days[model_days %in% legacy_0.9_kc_dates] = 0.9
+
+
 #Pad single-digit month, day values with 0s (e.g. "2" becomes "02"), then concatenate date strings
 kc_pasture_df = data.frame(kc_pas_days)
 kc_pasture_df$day = paste(str_pad(day(model_days), 2, pad = "0"), 
@@ -648,7 +695,7 @@ write.table(kc_pasture_df, file = file.path(SWBM_file_dir, "kc_pasture.txt"),
 #Build grain kc curve
 kc_grain_dormant = 0
 kc_grain_by_crop_stage = c(0, 0.27, 1.15, 1.15, 0)  
-days_in_crop_stage = c(37, 26, 32, 36) # includes start and end days in each stage
+days_in_crop_stage = c(38, 26, 32, 36) # includes start and end days in each stage
 
 #initialize growing season kc profile based on growth stage
 kc_grain_growing_season = rep(0, (sum(days_in_crop_stage) - 3)) # minus 3 fenceposts
@@ -680,6 +727,13 @@ for(yr in (start_year+1):end_year){
                   (start_day_index + sum(days_in_crop_stage) - 3)] = kc_grain_growing_season
 }
 
+# Read from file to exactly match legacy kc values for 1991-2011 period
+kc_grain_legacy = read.table(file.path(ref_data_dir,"kc_grain_1991_2011.txt"))
+kc_grain_legacy = data.frame(Date = as.Date(kc_grain_legacy$V2, format = "%d/%m/%Y"), kc_grain = kc_grain_legacy$V1)
+leap_days = as.Date(paste("29","02", seq(1904, end_year, by=4),sep="/"), format = "%d/%m/%Y")
+legacy_days_selector = model_days <= as.Date("2011-09-30") & !(model_days %in% leap_days)
+kc_grain_days[legacy_days_selector] = kc_grain_legacy$kc_grain
+
 # Build data frame with date formatted for file-writing
 kc_grain_days = round(kc_grain_days, 4)
 kc_grain_df = data.frame(kc_grain_days)
@@ -687,6 +741,8 @@ kc_grain_df = data.frame(kc_grain_days)
 kc_grain_df$day = paste(str_pad(day(model_days), 2, pad = "0"), 
                           str_pad(month(model_days), 2, pad = "0"), 
                           year(model_days), sep = "/")
+
+
 
 # Multiply the k_c by the demand multiplier (if irr_demand_mult!= 1, assumes land use change from grain)
 kc_grain_df$kc_grain_days = kc_grain_df$kc_grain_days * irr_demand_mult
@@ -1092,6 +1148,8 @@ file.copy(from = file.path(MF_file_dir,"SVIHM.sfr"),
           to = file.path(results_dir,paste0("SVIHM_",scenario_name,".sfr")))
 file.copy(from = file.path(SWBM_file_dir,"monthly_groundwater_by_luse.dat"), 
           to = file.path(results_dir,paste0("monthly_groundwater_by_luse_",scenario_name,".dat")))
+file.copy(from = file.path(SWBM_file_dir,"monthly_deficiency_by_luse.dat"), 
+          to = file.path(results_dir,paste0("monthly_deficiency_by_luse_",scenario_name,".dat")))
 
 
 

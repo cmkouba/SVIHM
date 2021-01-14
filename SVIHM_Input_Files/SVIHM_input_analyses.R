@@ -523,7 +523,7 @@ write_swbm_et_input_file=function(){
   
   
   #Original eto record
-  et_orig_input = read.table(file.path(ref_data_dir,"ref_et_1990_2011.txt"))
+  et_orig_input = read.table(file.path(ref_data_dir,"ref_et_1991_2011.txt"))
   et_orig = data.frame(Date = as.Date(et_orig_input$V3, format = "%d/%m/%Y"), ETo_mm = et_orig_input$V1*1000)
 
 
@@ -553,13 +553,20 @@ write_swbm_et_input_file=function(){
   et_stitched_2$ETo_mm = NA
   
   # 3a) Suture dates:
+  ## First Rationale:
   # last plausible ET record for the original input is June 2011. After that it flatlines for some reason.
   # first plausible CIMIS225 record is Apr 21, 2015. first full month is May 2015.
   # So, the stitched record will be:
   # original record 1991-June 30 2011, spatial CIMIS June 30 2011-Apr 20 2015, and 225 CIMIS Apr 21 2015-Sep 30 2018.
   # So, the stitched record will be:
   # original record 1991-June 30 2011, spatial CIMIS June 30 2011-Apr 20 2015, and 225 CIMIS Apr 21 2015-Sep 30 2018.
-  end_orig = as.Date("2011-06-30"); end_sp = as.Date("2015-04-20")
+  # end_orig = as.Date("2011-06-30"); end_sp = as.Date("2015-04-20")
+  
+  ## Second Rationale:
+  # I need to make the updated input files match the original calibrated input files
+  # as closely as possible. So the original ET record will extend all the way to 
+  # 2011-09-30. 
+  end_orig = as.Date("2011-09-30"); end_sp = as.Date("2015-04-20")
   
   #Assign original record
   et_stitched_2$ETo_mm[1:which(et_stitched_2$Date == end_orig)] = et_orig$ETo_mm[which(et_orig$Date==model_start_date):which(et_orig$Date == end_orig)]
@@ -592,6 +599,166 @@ write_swbm_et_input_file=function(){
 }
 
 # write_swbm_et_input_file()
+
+
+
+# COMPARE INPUTS ----------------------------------------------------------
+
+legacy_dir = "C:/Users/Claire/Documents/GitHub/SVIHM_master_2019/Scenarios/basecase"
+current_dir = "C:/Users/Claire/Documents/GitHub/SVIHM/Scenarios/basecase_input_match"
+
+
+# _ET comparison - checks out prior to June  ---------------------------------------------
+
+# leg_et = read.table(file.path(legacy_dir,"ref_et.txt"))
+# leg_et = data.frame(Date = as.Date(leg_et$V3, format = "%d/%m/%Y"), ETo_mm = leg_et$V1*1000)
+# 
+# cur_et = read.table(file.path(current_dir,"ref_et.txt"))
+# cur_et = data.frame(Date = as.Date(cur_et$V3, format = "%d/%m/%Y"), ETo_mm = cur_et$V1*1000)
+# 
+# dim(leg_et)
+# dim(cur_et)
+# 
+# cur_et = cur_et[cur_et$Date<=as.Date("2011-09-30"),]
+# leg_et = leg_et[leg_et$Date<=as.Date("2011-09-30"),]
+# 
+# et_tab = cur_et
+# et_tab$ETo_mm_legacy = leg_et$ETo_mm[match(et_tab$Date,leg_et$Date )]
+# dim(et_tab)
+# 
+# plot(et_tab$ETo_mm_legacy,et_tab$ETo_mm)
+# sum(et_tab$ETo_mm_legacy == et_tab$ETo_mm, na.rm=T)
+# sum(et_tab$ETo_mm_legacy != et_tab$ETo_mm, na.rm=T)
+# 
+# # View(et_tab[et_tab$ETo_mm_legacy != et_tab$ETo_mm,])
+# 
+# dim(et_tab)
+
+# To do: compare ETS outputs (confirm that messing with the extinction depth didn't change anything)
+
+# _precip comparison ------------------------------------------------------
+
+# leg_ppt = read.table(file.path(legacy_dir,"precip.txt"))
+# leg_ppt = data.frame(Date = as.Date(leg_ppt$V2, format = "%d/%m/%Y"), rain_mm = leg_ppt$V1*1000)
+# 
+# 
+# cur_ppt = read.table(file.path(current_dir,"precip.txt"))
+# cur_ppt = data.frame(Date = as.Date(cur_ppt$V2, format = "%d/%m/%Y"), rain_mm = cur_ppt$V1*1000)
+# 
+# dim(leg_ppt)
+# dim(cur_ppt)
+# 
+# cur_ppt = cur_ppt[cur_ppt$Date<=as.Date("2011-09-30"),]
+# leg_ppt = leg_ppt[leg_ppt$Date<=as.Date("2011-09-30"),]
+# 
+# ppt_tab = cur_ppt
+# ppt_tab$rain_mm_legacy = leg_ppt$rain_mm[match(ppt_tab$Date,leg_ppt$Date )]
+# dim(ppt_tab)
+# 
+# plot(ppt_tab$rain_mm_legacy,ppt_tab$rain_mm)
+# sum(ppt_tab$rain_mm_legacy == ppt_tab$rain_mm,na.rm=T)
+# sum(ppt_tab$rain_mm_legacy != ppt_tab$rain_mm, na.rm=T)
+
+
+# _kc values --------------------------------------------------------------
+
+# leg_kc_alf = read.table(file.path(legacy_dir,"kc_alfalfa.txt"))
+# leg_kc_alf = data.frame(Date = as.Date(leg_kc_alf$V2, format = "%d/%m/%Y"), kc_alf = as.numeric(leg_kc_alf$V1))
+# 
+# cur_kc_alf = read.table(file.path(current_dir,"kc_alfalfa.txt"))
+# cur_kc_alf = data.frame(Date = as.Date(cur_kc_alf$V2, format = "%d/%m/%Y"), kc_alf = cur_kc_alf$V1)
+# 
+# kc_alf_tab = cur_kc_alf
+# kc_alf_tab$kc_alf_legacy = leg_kc_alf$kc_alf[match(kc_alf_tab$Date,leg_kc_alf$Date )]
+# dim(kc_alf_tab)
+# 
+# plot(kc_alf_tab$kc_alf_legacy,kc_alf_tab$kc_alf)
+# sum(kc_alf_tab$kc_alf_legacy == kc_alf_tab$kc_alf,na.rm=T)
+# sum(kc_alf_tab$kc_alf_legacy != kc_alf_tab$kc_alf, na.rm=T)
+
+# View(kc_alf_tab[kc_alf_tab$kc_alf_legacy != kc_alf_tab$kc_alf,])
+
+# Super odd. There are only 8 mismatches. Wonder why. But sure, we can fix those 8 days.
+# Fixed.
+
+# leg_kc_grain = read.table(file.path(legacy_dir,"kc_grain.txt"))
+# leg_kc_grain = data.frame(Date = as.Date(leg_kc_grain$V2, format = "%d/%m/%Y"), kc_grain = as.numeric(leg_kc_grain$V1))
+# 
+# cur_kc_grain = read.table(file.path(current_dir,"kc_grain.txt"))
+# cur_kc_grain = data.frame(Date = as.Date(cur_kc_grain$V2, format = "%d/%m/%Y"), kc_grain = cur_kc_grain$V1)
+# 
+# kc_grain_tab = cur_kc_grain
+# kc_grain_tab$kc_grain_legacy = leg_kc_grain$kc_grain[match(kc_grain_tab$Date,leg_kc_grain$Date )]
+# dim(kc_grain_tab)
+# 
+# plot(kc_grain_tab$kc_grain_legacy,kc_grain_tab$kc_grain)
+# sum(kc_grain_tab$kc_grain_legacy == kc_grain_tab$kc_grain,na.rm=T)
+# sum(kc_grain_tab$kc_grain_legacy != kc_grain_tab$kc_grain, na.rm=T)
+
+#Fixed Kc grain. Still very small diffs but negligible.
+
+# leg_kc_pasture = read.table(file.path(legacy_dir,"kc_pasture.txt"))
+# leg_kc_pasture = data.frame(Date = as.Date(leg_kc_pasture$V2, format = "%d/%m/%Y"), kc_pasture = as.numeric(leg_kc_pasture$V1))
+# 
+# cur_kc_pasture = read.table(file.path(current_dir,"kc_pasture.txt"))
+# cur_kc_pasture = data.frame(Date = as.Date(cur_kc_pasture$V2, format = "%d/%m/%Y"), kc_pasture = cur_kc_pasture$V1)
+# 
+# kc_pasture_tab = cur_kc_pasture
+# kc_pasture_tab$kc_pasture_legacy = leg_kc_pasture$kc_pasture[match(kc_pasture_tab$Date,leg_kc_pasture$Date )]
+# dim(kc_pasture_tab)
+# 
+# plot(kc_pasture_tab$kc_pasture_legacy,kc_pasture_tab$kc_pasture)
+# sum(kc_pasture_tab$kc_pasture_legacy == kc_pasture_tab$kc_pasture,na.rm=T)
+# sum(kc_pasture_tab$kc_pasture_legacy != kc_pasture_tab$kc_pasture, na.rm=T)
+
+# View(kc_pasture_tab[kc_pasture_tab$kc_pasture_legacy != kc_pasture_tab$kc_pasture,])
+
+# Super odd. There are only 8 mismatches. Wonder why. But sure, we can fix those 8 days.
+# Fixed.
+
+
+# _streamflow inputs ------------------------------------------------------
+
+# leg_stream = read.table(file.path(legacy_dir,"streamflow_input.txt"), header = T)
+# 
+# cur_stream = read.table(file.path(current_dir,"streamflow_input.txt"), header = T)
+# 
+# colnames(leg_stream)
+# colnames(cur_stream)
+# 
+# dim(leg_stream)
+# dim(cur_stream)
+# 
+# nmonths = 252
+# 
+# for(trib in colnames(leg_stream)[2:13]){
+#   plot(leg_stream[,trib][1:nmonths], cur_stream[,trib][1:nmonths], main = trib)
+# }
+ # fixed in regression modeling. By hard-copying the orignal streamflow inputs.
+
+
+# _ SVIHM.ets ----------------------------
+
+# ET_depth_1_2019_vals = as.vector(as.matrix(read.table(file.path("C:/Users/Claire/Desktop/SVIHM_2019_ETS_depth.txt"))))
+# ET_depth_1_2019 = matrix(ET_depth_1_2019_vals, nrow = 440, ncol = 210, byrow = T)
+# image(t(ET_depth_1_2019)[,rev(1:440)])
+# 
+# ET_depth_1_vals = as.vector(as.matrix(read.table(file.path("C:/Users/Claire/Desktop/SVIHM_basecase_ETS_depth.txt"))))
+# ET_depth_1 = matrix(ET_depth_1_vals, nrow = 440, ncol = 210, byrow = T)
+# image(t(ET_depth_1)[,rev(1:440)])
+# 
+# 
+# par(mfrow = c(1,2))
+# 
+# ET_rate_1_2019_vals = as.vector(as.matrix(read.table(file.path("C:/Users/Claire/Desktop/SVIHM_2019_ET Rate.txt"))))
+# ET_rate_1_2019 = matrix(ET_rate_1_2019_vals, nrow = 440, ncol = 210, byrow = T)
+# image(t(ET_rate_1_2019)[,rev(1:440)])
+# 
+# ET_rate_1_vals = as.vector(as.matrix(read.table(file.path("C:/Users/Claire/Desktop/SVIHM_basecase_ET_Rate.txt"))))
+# ET_rate_1 = matrix(ET_rate_1_vals, nrow = 440, ncol = 210, byrow = T)
+# image(t(ET_rate_1)[,rev(1:440)])
+# 
+# sum(ET_rate_1_2019 == ET_rate_1)
 
 # scratchwork -------------------------------------------------------------
 
@@ -1056,33 +1223,33 @@ write_swbm_et_input_file=function(){
 #This has dropped by 0.5 and 0.5, respectively.
 
 #_Color-code which station used to gap-fill -------------------------------
-# First: generate p_record going line-by-line through the "get_daily_precip_table()" function
-x_labs = p_record$Date
-keep_these = month(x_labs) == 10 & day(x_labs) == 1 & (year(x_labs) %% 5 == 0)
-x_labs = x_labs[keep_these]
-# x_labs[!keep_these] = NA
-
-barplot(height = p_record$fj_interp, width = .81,
-        border = p_record$fj_interp_color,
-        xaxt = "n", xlim = c(0,length(p_record$fj_interp)))
-axis(side=1,at=which(keep_these),labels=x_labs, las = 2)
-
-legend(x = "topright", col = station_table$color, legend = station_table$abbrev, pch = 19)
-test1 = aggregate(p_record$fj_interp_color, by=list(p_record$fj_interp_color), FUN = length)
-test2 = merge(station_table@data, test1, by.x = "color", by.y="Group.1")
-
-plot(x = p_record$Date, y = p_record$fj_interp, main = "FJ daily precip data source",
-        col = p_record$fj_interp_color, pch = 18,
-     xlab = "Date", ylab = "")
-legend(x = "topright", col = station_table$color, legend = station_table$abbrev, pch = 19)
-how_many_each_stn = aggregate(p_record$fj_interp_color, by=list(p_record$fj_interp_color), FUN = length)
-colnames(how_many_each_stn) = c("color","num_fj_interp")
-how_many_each_stn = merge(how_many_each_stn, station_table, by.x = "color",by.y="color")
-
-plot(x = p_record$Date, y = p_record$cal_interp,
-     col = p_record$cal_interp_color, pch = 18,
-     xlab = "Date", ylab = "")
-legend(x = "topright", col = station_table$color, legend = station_table$abbrev, pch = 19)
+## First: generate p_record going line-by-line through the "get_daily_precip_table()" function
+# x_labs = p_record$Date
+# keep_these = month(x_labs) == 10 & day(x_labs) == 1 & (year(x_labs) %% 5 == 0)
+# x_labs = x_labs[keep_these]
+# # x_labs[!keep_these] = NA
+# 
+# barplot(height = p_record$fj_interp, width = .81,
+#         border = p_record$fj_interp_color,
+#         xaxt = "n", xlim = c(0,length(p_record$fj_interp)))
+# axis(side=1,at=which(keep_these),labels=x_labs, las = 2)
+# 
+# legend(x = "topright", col = station_table$color, legend = station_table$abbrev, pch = 19)
+# test1 = aggregate(p_record$fj_interp_color, by=list(p_record$fj_interp_color), FUN = length)
+# test2 = merge(station_table@data, test1, by.x = "color", by.y="Group.1")
+# 
+# plot(x = p_record$Date, y = p_record$fj_interp, main = "FJ daily precip data source",
+#         col = p_record$fj_interp_color, pch = 18,
+#      xlab = "Date", ylab = "")
+# legend(x = "topright", col = station_table$color, legend = station_table$abbrev, pch = 19)
+# how_many_each_stn = aggregate(p_record$fj_interp_color, by=list(p_record$fj_interp_color), FUN = length)
+# colnames(how_many_each_stn) = c("color","num_fj_interp")
+# how_many_each_stn = merge(how_many_each_stn, station_table, by.x = "color",by.y="color")
+# 
+# plot(x = p_record$Date, y = p_record$cal_interp,
+#      col = p_record$cal_interp_color, pch = 18,
+#      xlab = "Date", ylab = "")
+# legend(x = "topright", col = station_table$color, legend = station_table$abbrev, pch = 19)
 
 # # 
 # # # _Did I replicate original 1991-2011 precip record ------------------------------

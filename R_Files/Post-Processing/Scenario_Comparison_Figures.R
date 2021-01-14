@@ -19,7 +19,8 @@ rm(list = ls())
 
 #Define directories
 svihm_dir = dirname(dirname(dirname(getActiveDocumentContext()$path ))) #Outer SVIHM folder
-swbm_scenario_dir = file.path(svihm_dir,"SWBM")
+# swbm_scenario_dir = file.path(svihm_dir,"SWBM")
+swbm_scenario_dir = file.path(svihm_dir,"Scenarios")
 ref_data_dir = file.path(svihm_dir, "SVIHM_Input_Files", "reference_data")
 output_dir = file.path(svihm_dir,"SVIHM_Input_Files","Scenario_Development")
 # pdf_dir = "C:/Users/Claire/Documents/UCD/Presentations or Talks or Workshops/2019.09.17 GRA WGC/Figures"
@@ -93,7 +94,7 @@ plot_water_budget_overview = function(mwb, scenario_name, output_type = "pdf"){
   
   #Plot parameters
   vol_lim = c(min(mwb[2:7]), max(mwb[2:7]))
-  x_lim = c(240, dim(mwb)[1])# x_lim = c(1, dim(mwb)[1])
+  x_lim = c(1, 96) #x_lim = c(240, dim(mwb)[1])# x_lim = c(1, dim(mwb)[1])
   #Symbols and legend labels
   components = make_legend_symbol_table()
 
@@ -432,10 +433,14 @@ barplots_comparison = function(scenario_totals){
 monthly_water_budget_basecase = read.table(file.path(swbm_scenario_dir,"basecase","monthly_water_budget.dat"), header = TRUE)
 mwb_basecase = monthly_water_budget_basecase
 
-#Baseline, accounting for drains
+# Baseline, master 2019 version
+master_2019_dir = "C:/Users/Claire/Documents/GitHub/SVIHM_master_2019/Scenarios"
+monthly_water_budget_basecase_2019 = read.table(file.path(master_2019_dir,"basecase","monthly_water_budget.dat"), header = TRUE)
+mwb19_basecase = monthly_water_budget_basecase_2019
 
-monthly_water_budget_basecase_drains = read.table(file.path(swbm_scenario_dir,"basecase_drains","monthly_water_budget.dat"), header = TRUE)
-mwb_bd = monthly_water_budget_basecase_drains
+#Baseline, accounting for drains
+# monthly_water_budget_basecase_drains = read.table(file.path(swbm_scenario_dir,"basecase_drains","monthly_water_budget.dat"), header = TRUE)
+# mwb_bd = monthly_water_budget_basecase_drains
 # Read in alfalfa irrigation schedule change scenarios
 
 monthly_water_budget_alf_stop_jul10 = read.table(file.path(swbm_scenario_dir,"alf_irr_stop_jul10","monthly_water_budget.dat"), header = TRUE)
@@ -501,7 +506,9 @@ make_legend_symbol_table = function(){
 
 # generate  overview plots
 plot_water_budget_overview(mwb_basecase, "Basecase", output_type = "png")
-plot_water_budget_overview(mwb_bd, "Basecase (Drains)", output_type = "png")
+plot_water_budget_overview(mwb19_basecase, "Basecase (1991-2011)", output_type = "png")
+
+# plot_water_budget_overview(mwb_bd, "Basecase (Drains)", output_type = "png")
 plot_water_budget_overview(mwb_mar, "MAR", output_type = "png")
 plot_water_budget_overview(mwb_ilr, "ILR", output_type = "png")
 plot_water_budget_overview(mwb_mar_ilr, "MAR_ILR", output_type = "png")
