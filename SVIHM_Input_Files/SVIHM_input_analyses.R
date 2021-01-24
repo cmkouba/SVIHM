@@ -958,8 +958,8 @@ current_dir = "C:/Users/Claire/Documents/GitHub/SVIHM/Scenarios/basecase_input_m
 
 # _long term precip trends ------------------------------------------------
 
-# #First, retrieve the interpolated records of everything
-# 
+#First, retrieve the interpolated records of everything
+
 # # Step 1. run setup and the NOAA data retrieval section in tabular_data_upload.R
 # noaa = data.frame(tbl(siskiyou_tables, "noaa_daily_data"))
 # # Step 2. run the setup and subfunctions sections of this script to get model_start_date, etc.
@@ -995,53 +995,53 @@ current_dir = "C:/Users/Claire/Documents/GitHub/SVIHM/Scenarios/basecase_input_m
 # #check for nas
 # sum(is.na(p_record$gv_interp))
 # 
-# #Then, aggregate by month and by water year
-# #monthly
-# p_monthly = p_record %>%
-#   dplyr::select(PRCP_mm_cal, PRCP_mm_fj, PRCP_mm_et, PRCP_mm_gv,
-#          PRCP_mm_yr,PRCP_mm_y2, PRCP_mm_orig,
-#          fj_interp, cal_interp, gv_interp, month_day1) %>%
-#   group_by(month_day1) %>%
-#   summarise_all(funs(sum), na.rm=TRUE)
-# 
-# p_monthly_melt = melt(p_monthly, id.vars = "month_day1")
-# p <- ggplot(p_monthly_melt, aes(month_day1, value, color = variable)) +
-#   geom_line(aes(group=variable))
-# p
-# 
-# #Then, aggregate by month and by water year
-# #yearly
-# p_wy = p_record %>%
-#   dplyr::select(#PRCP_mm_cal, PRCP_mm_fj, PRCP_mm_gv, # PRCP_mm_et,
-#                  # PRCP_mm_yr,PRCP_mm_y2,
-#                 # interp_cal_fj_gv_mean,
-#                 PRCP_mm_orig,
-#                 fj_interp, cal_interp, gv_interp,
-#                 water_year) %>%
-#   group_by(water_year) %>%
-#   summarise_all(funs(sum), na.rm=TRUE)
-# 
-# p_yearly_melt = melt(p_wy, id.vars = "water_year")
-# p <- ggplot(p_yearly_melt, aes(water_year, value/25.4, color = variable)) +
-#   geom_line(aes(group=variable))
-# p
+# # #Then, aggregate by month and by water year
+# # #monthly
+# # p_monthly = p_record %>%
+# #   dplyr::select(PRCP_mm_cal, PRCP_mm_fj, PRCP_mm_et, PRCP_mm_gv,
+# #          PRCP_mm_yr,PRCP_mm_y2, PRCP_mm_orig,
+# #          fj_interp, cal_interp, gv_interp, month_day1) %>%
+# #   group_by(month_day1) %>%
+# #   summarise_all(funs(sum), na.rm=TRUE)
+# # 
+# # p_monthly_melt = melt(p_monthly, id.vars = "month_day1")
+# # p <- ggplot(p_monthly_melt, aes(month_day1, value, color = variable)) +
+# #   geom_line(aes(group=variable))
+# # p
+# # 
+# # #Then, aggregate by month and by water year
+# # #yearly
+# # p_wy = p_record %>%
+# #   dplyr::select(#PRCP_mm_cal, PRCP_mm_fj, PRCP_mm_gv, # PRCP_mm_et,
+# #                  # PRCP_mm_yr,PRCP_mm_y2,
+# #                 # interp_cal_fj_gv_mean,
+# #                 PRCP_mm_orig,
+# #                 fj_interp, cal_interp, gv_interp,
+# #                 water_year) %>%
+# #   group_by(water_year) %>%
+# #   summarise_all(funs(sum), na.rm=TRUE)
+# # 
+# # p_yearly_melt = melt(p_wy, id.vars = "water_year")
+# # p <- ggplot(p_yearly_melt, aes(water_year, value/25.4, color = variable)) +
+# #   geom_line(aes(group=variable))
+# # p
 # 
 # #_Tanaka-Deas oct-march water year type break-points checking ----
 # 
 # p_record$interp_cal_fj_mean =  apply(X = dplyr::select(p_record, fj_interp, cal_interp),
 #                                         MARGIN = 1, FUN = mean, na.rm=F)
 # 
-# rainmo2 = aggregate(p_record$interp_cal_fj_mean,
+# rainmo = aggregate(p_record$interp_cal_fj_mean,
 #                     by = list(year(p_record$Date), month(p_record$Date)),
 #                     FUN = sum)
-# colnames(rainmo2) = c("year","month","precip_mm")
-# rainmo$precip_mm=rainmo$precip_m*1000
+# colnames(rainmo) = c("year","month","precip_mm")
+# rainmo$precip_m=rainmo$precip_mm/1000
 # rainmo = rainmo[order(rainmo$year, rainmo$month),]
 # plot(as.Date(paste(rainmo$year, rainmo$month, "01", sep = "-")),
 #      rainmo$precip_mm / 25.4, pch = 18, type = "o", ylim = c(0, 15),
 #      main = "SVIHM monthly rainfall record", ylab = "Monthly rainfall (in)", xlab = "")
 # grid()
-# rainmo2 = rainmo2[order(rainmo2$year, rainmo2$month),]
+# rainmo2 = rainmo#2[order(rainmo2$year, rainmo2$month),]
 # rainmo2 = rainmo2[as.Date(paste(rainmo2$year, rainmo2$month, "01", sep = "-")) >= as.Date("1990-10-01"),]
 # plot(as.Date(paste(rainmo2$year, rainmo2$month, "01", sep = "-")),
 #      rainmo2$precip_mm/25.4, pch = 18, type = "o", ylim = c(0, 15),
@@ -1082,6 +1082,29 @@ current_dir = "C:/Users/Claire/Documents/GitHub/SVIHM/Scenarios/basecase_input_m
 # # grid()
 # 
 # 
+# png(filename = "Scott Valley annual Rain record.png", width = 8, height = 5, units = "in", res = 300)
+# # Aggregate by water year
+# rain_wy = aggregate(p_record$interp_cal_fj_mean, by = list(p_record$water_year), FUN = sum)
+# rain_wy$color = gray((1:nrow(rain_wy)/nrow(rain_wy)))
+# #Assign water year type colors. Divide the years in thirds.
+# dry_breakpoint = rain_wy$x[order(rain_wy$x)][round(nrow(rain_wy) * 0.33)]
+# wet_breakpoint = rain_wy$x[order(rain_wy$x)][round(nrow(rain_wy) * 0.66)]
+# rain_wy$wy_type_color = "goldenrod"
+# rain_wy$wy_type_color[rain_wy$x <= dry_breakpoint] = "orangered"
+# rain_wy$wy_type_color[rain_wy$x >= wet_breakpoint] = "dodgerblue"
+# rain_mean = mean(rain_wy$x)
+# # barplot
+# rain_wy = rain_wy[rain_wy$Group.1>= 1991 & rain_wy$Group.1<= 2018 ,]
+# barplot(rain_wy$x/25.4, col = rain_wy$wy_type_color, names = 1991:2018, 
+#         ylab = "Annual Rainfall (in)",xlab = "Water Year",
+#         sub = "Based primarily on records from the Fort Jones and Callahan weather stations",
+#         main = "Scott Valley Rainfall Record")
+# grid()
+# abline(h=rain_mean/25.4, lty =2, lwd=2, col = "brown")
+# legend(x = "bottomleft", pch = c(15,15,15,NA), lty = c(NA,NA,NA,2), lwd = c(NA,NA,NA,2),
+#        col = c("orangered","goldenrod","dodgerblue","brown"), cex = 0.8,
+#        legend = c("Dry (<16.4 in)", "Average","Wet (>24.4 in)","1942-2020 Avg (21.0 in)"))
+# dev.off()
 # 
 # # Subset for only oct-march months
 # sv_oct_mar = p_record[month(p_record$Date) %in% c(10,11,12,1,2,3),
@@ -1093,17 +1116,18 @@ current_dir = "C:/Users/Claire/Documents/GitHub/SVIHM/Scenarios/basecase_input_m
 # annual_o_m = aggregate(sv_oct_mar$interp_cal_fj_mean, by = list(sv_oct_mar$wy), FUN = sum)
 # annual_o_m$color = gray((1:nrow(annual_o_m)/nrow(annual_o_m)))
 # #Assign water year type colors. Divide the years in thirds.
-# dry_breakpoint = annual_o_m$x[order(annual_o_m$x)][round(nrow(annual_o_m) * 0.33)] 
-# wet_breakpoint = annual_o_m$x[order(annual_o_m$x)][round(nrow(annual_o_m) * 0.66)] 
+# dry_breakpoint = annual_o_m$x[order(annual_o_m$x)][round(nrow(annual_o_m) * 0.33)]
+# wet_breakpoint = annual_o_m$x[order(annual_o_m$x)][round(nrow(annual_o_m) * 0.66)]
 # annual_o_m$wy_type_color = "goldenrod"
 # annual_o_m$wy_type_color[annual_o_m$x <= dry_breakpoint] = "orangered"
 # annual_o_m$wy_type_color[annual_o_m$x >= wet_breakpoint] = "dodgerblue"
+# 
 # 
 # # 1. Plot for full available data: 1944-2018
 # par(mfrow = c(2,1))
 # # annual_o_m = annual_o_m[annual_o_m$Group.1>1990,]
 # #plot over time
-# plot(annual_o_m$Group.1, annual_o_m$x / 25.4, 
+# plot(annual_o_m$Group.1, annual_o_m$x / 25.4,
 #      pch = 21, type = "o", main = "Oct-Mar Rainfall, 1944-2018",
 #      col = "black", ylim = c(0,30),
 #      #bg = annual_o_m$color,
@@ -1127,16 +1151,16 @@ current_dir = "C:/Users/Claire/Documents/GitHub/SVIHM/Scenarios/basecase_input_m
 # # 2. subset for their period of study: 1942-2008
 # annual_o_m = annual_o_m[annual_o_m$Group.1<= 2008,]
 # #plot over time
-# plot(annual_o_m$Group.1, annual_o_m$x / 25.4, 
+# plot(annual_o_m$Group.1, annual_o_m$x / 25.4,
 #      pch = 21, type = "o", main = "Oct-Mar Rainfall, 1942-2008",
-#      col = "black", 
+#      col = "black",
 #      #bg = annual_o_m$color,
 #      bg = annual_o_m$wy_type_color,
 #      xlab = "Water Year", ylab = "Oct-Mar Cumulative Rainfall, in.")
 # abline(h = mean(annual_o_m$x / 25.4), lty = 2)
 # grid()
 # #Plot in order
-# plot(annual_o_m$x[order(annual_o_m$x)] / 25.4, 
+# plot(annual_o_m$x[order(annual_o_m$x)] / 25.4,
 #      pch = 21, col = "black",
 #      main = "Oct-Mar Rainfall, 1942-2008, Sorted",
 #      bg = annual_o_m$wy_type_color[order(annual_o_m$x)],
