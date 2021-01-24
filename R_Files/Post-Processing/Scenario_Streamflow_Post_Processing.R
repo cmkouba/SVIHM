@@ -20,10 +20,13 @@ library(tidyr)
 # scenario_ids = c("MAR_ILR","mar_ilr_flowlims", "irrig_0.8", "irrig_0.9")
 # scenario_ids = c("Basecase","irrig_0.8","irrig_0.9")
 # scenario_ids = c("Basecase","alf_ir_stop_jul10")
-scenario_ids = c("MAR","ILR",
-                 "MAR_ILR",#"irrig_0.8",
-                 "irrig_0.9",#"nvoa",
-                 "natveg_gwmixed_outside_adj")
+scenario_ids = c("MAR","ILR","MAR_ILR","MAR_ILR_flowlims",
+                 "irrig_0.8","irrig_0.9",
+                 "alf_irr_stop_jul10","alf_irr_stop_aug01",
+                 "nvoa", "natveg_gwmixed_outside_adj",
+                 "nvia","natveg_gwmixed_inside_adj",
+                 "nv","natveg_gwmixed_all",
+                 "reservoir_french_30")
 
 
 # COMPARE_MAR = TRUE
@@ -85,26 +88,44 @@ dif_lim = c(-80,140)
                            Flow_cfs = read.table(paste0(flow_loc,'_irrig_0.9.dat'), skip = 2)[,3]*0.000408734569)
   
   #Alf Irr stop dates
-  DP_alf_irr_jul10_flow = data.frame(Date = seq(start_date, end_date, "days"),                              # Import ILR flow data
+  DP_alf_irr_jul10_flow = data.frame(Date = seq(start_date, end_date, "days"), 
                                      Flow_m3day = read.table(paste0(flow_loc,'_alf_irr_stop_jul10.dat'), skip = 2)[,3],
                                      Flow_cfs = read.table(paste0(flow_loc,'_alf_irr_stop_jul10.dat'), skip = 2)[,3]*0.000408734569)
-  DP_alf_irr_aug01_flow = data.frame(Date = seq(start_date, end_date, "days"),                              # Import ILR flow data
+  DP_alf_irr_aug01_flow = data.frame(Date = seq(start_date, end_date, "days"),
                                      Flow_m3day = read.table(paste0(flow_loc,'_alf_irr_stop_aug01.dat'), skip = 2)[,3],
                                      Flow_cfs = read.table(paste0(flow_loc,'_alf_irr_stop_aug01.dat'), skip = 2)[,3]*0.000408734569)
   
   # "turn off pumping" or nat veg in some areas
-  DP_natveg_outside_adj_flow = data.frame(Date = seq(start_date, end_date, "days"),                              # Import ILR flow data
+  DP_natveg_outside_adj_flow = data.frame(Date = seq(start_date, end_date, "days"), 
                                                Flow_m3day = read.table(paste0(flow_loc,'_natveg_outside_adj.dat'), skip = 2)[,3],
                                                Flow_cfs = read.table(paste0(flow_loc,'_natveg_outside_adj.dat'), skip = 2)[,3]*0.000408734569)
   
-  DP_natveg_gwmixed_outside_adj_flow = data.frame(Date = seq(start_date, end_date, "days"),                              # Import ILR flow data
+  DP_natveg_gwmixed_outside_adj_flow = data.frame(Date = seq(start_date, end_date, "days"), 
                                                        Flow_m3day = read.table(paste0(flow_loc,'_natveg_gwmixed_outside_adj.dat'), skip = 2)[,3],
                                                        Flow_cfs = read.table(paste0(flow_loc,'_natveg_gwmixed_outside_adj.dat'), skip = 2)[,3]*0.000408734569)
   
+  DP_natveg_inside_adj_flow = data.frame(Date = seq(start_date, end_date, "days"), 
+                                          Flow_m3day = read.table(paste0(flow_loc,'_natveg_inside_adj.dat'), skip = 2)[,3],
+                                          Flow_cfs = read.table(paste0(flow_loc,'_natveg_inside_adj.dat'), skip = 2)[,3]*0.000408734569)
   
-
-
-
+  DP_natveg_gwmixed_inside_adj_flow = data.frame(Date = seq(start_date, end_date, "days"),
+                                                  Flow_m3day = read.table(paste0(flow_loc,'_natveg_gwmixed_inside_adj.dat'), skip = 2)[,3],
+                                                  Flow_cfs = read.table(paste0(flow_loc,'_natveg_gwmixed_inside_adj.dat'), skip = 2)[,3]*0.000408734569)
+  
+  DP_natveg_all_flow = data.frame(Date = seq(start_date, end_date, "days"), 
+                                         Flow_m3day = read.table(paste0(flow_loc,'_natveg_all.dat'), skip = 2)[,3],
+                                         Flow_cfs = read.table(paste0(flow_loc,'_natveg_all.dat'), skip = 2)[,3]*0.000408734569)
+  
+  DP_natveg_gwmixed_all_flow = data.frame(Date = seq(start_date, end_date, "days"),
+                                                 Flow_m3day = read.table(paste0(flow_loc,'_natveg_gwmixed_all.dat'), skip = 2)[,3],
+                                                 Flow_cfs = read.table(paste0(flow_loc,'_natveg_gwmixed_all.dat'), skip = 2)[,3]*0.000408734569)
+  
+  DP_reservoir_french_flow = data.frame(Date = seq(start_date, end_date, "days"),
+    # Date = seq(from=start_date,length.out = 7187, by="days"),
+                                        Flow_m3day = read.table(paste0(flow_loc,'_reservoir_french.dat'), skip = 2)[,3],
+                                        Flow_cfs = read.table(paste0(flow_loc,'_reservoir_french.dat'), skip = 2)[,3]*0.000408734569)
+  
+  
 # Make a table for Thomas and his fish reconnection estimate -------------------------------------------------
   
   making_this_table = F
@@ -333,6 +354,9 @@ return(Daily_Flow)
 
 }
 
+fd = make_flow_diff_daily_tab(basecase_flow_table = basecase_test,
+                              daily_flow_tables = list(DP_reservoir_french_flow), 
+                              scenario_ids = "res_french")
 
 # FLOW DIFFERENCES
 
@@ -344,24 +368,29 @@ Flow_Diff_Daily = make_flow_diff_daily_tab(
          DP_MAR_flow, 
          DP_ILR_flow, 
          DP_MAR_ILR_flow,
-         #DP_Basecase_fl_flow, 
-         #DP_MAR_ILR_fl_flow,
-         #DP_0.8_flow, 
+         DP_Basecase_fl_flow, 
+         DP_MAR_ILR_fl_flow,
+         DP_0.8_flow, 
          DP_0.9_flow,
-         #DP_alf_irr_jul10_flow, 
-         #DP_alf_irr_aug01_flow,
-         #DP_natveg_outside_adj_flow,
-         DP_natveg_gwmixed_outside_adj_flow
+         DP_alf_irr_jul10_flow, 
+         DP_alf_irr_aug01_flow,
+         DP_natveg_outside_adj_flow,
+         DP_natveg_gwmixed_outside_adj_flow,
+         DP_natveg_inside_adj_flow,
+         DP_natveg_gwmixed_inside_adj_flow,
+         DP_natveg_all_flow,
+         DP_natveg_gwmixed_all_flow
+         
+         
     ),
   scenario_ids = c(
-                   "mar","ilr",
-                   "mar_ilr", 
-                   #"flowlims", "mar_ilr_flowlims", 
-                   #"irrig_0.8",
-                   "irrig_0.9",
-                   #"alf_irr_jul10", "alf_irr_aug01",
-                   #"nvoa",
-                   "nvgwmoa"
+                   "mar","ilr", "mar_ilr",
+                   "flowlims", "mar_ilr_flowlims", 
+                   "irrig_0.8", "irrig_0.9",
+                   "alf_irr_jul10", "alf_irr_aug01",
+                   "nvoa","nvgwmoa",
+                   "nvia","nvgwmia",
+                   "nv","nvgwm"
   ))
 
 # Average difference in flow for each Stress Period
@@ -391,23 +420,23 @@ Daily_Flow = make_daily_flow_tab(
                            DP_MAR_flow, 
                            DP_ILR_flow, 
                            DP_MAR_ILR_flow,
-                           #DP_Basecase_fl_flow, 
-                           #DP_MAR_ILR_fl_flow,
-                           #DP_0.8_flow, 
+                           DP_Basecase_fl_flow, 
+                           DP_MAR_ILR_fl_flow,
+                           DP_0.8_flow, 
                            DP_0.9_flow,
-                           #DP_alf_irr_jul10_flow, 
-                           #DP_alf_irr_aug01_flow,
-                           #DP_natveg_outside_adj_flow,
+                           DP_alf_irr_jul10_flow, 
+                           DP_alf_irr_aug01_flow,
+                           DP_natveg_outside_adj_flow,
                            DP_natveg_gwmixed_outside_adj_flow
   ),
   scenario_ids = c("basecase","mar","ilr",
                    "mar_ilr", 
-                   #"flowlims", "mar_ilr_flowlims", 
-                   #"irrig_0.8",
-                   "irrig_0.9",
-                   #"alf_irr_jul10", "alf_irr_aug01",
-                   #"nvoa",
-                   "nvgwmoa"
+                   "flowlims", "mar_ilr_flowlims", 
+                   "irrig_0.8","irrig_0.9",
+                   "alf_irr_jul10", "alf_irr_aug01",
+                   "nvoa", "nvgwmoa",
+                   "nvia","nvgwmia",
+                   "nv","nvgwm"
   ))
 
 # Average flow for each Stress Period
@@ -452,22 +481,44 @@ MAR_ILR_Flowlims_geom_ribbon_data = data.frame(x = c(1,2,3,MAR_ILR_flowlims_xint
 irrig_0.8_geom_ribbon_data = data.frame(x = 1:12, y = Flow_Diff_Monthly_Avg$irrig_0.8_difference_cfs)
 irrig_0.9_geom_ribbon_data = data.frame(x = 1:12, y = Flow_Diff_Monthly_Avg$irrig_0.9_difference_cfs)
 
-
 nvoa_xintercept_cfs = 3 +(-Flow_Diff_Monthly_Avg$nvoa_difference_cfs[3] /(Flow_Diff_Monthly_Avg$nvoa_difference_cfs[4] - Flow_Diff_Monthly_Avg$nvoa_difference_cfs[3]))
 nvoa_geom_ribbon_data = data.frame(x = c(1,2,3,nvoa_xintercept_cfs,4,5,6,7,8,9,10,11,12),
                                   y = c(Flow_Diff_Monthly_Avg$nvoa_difference_cfs[1:3], 0, Flow_Diff_Monthly_Avg$nvoa_difference_cfs[4:12])      )
-
 nvgwmoa_xintercept_1_cfs = 1 +(-Flow_Diff_Monthly_Avg$nvgwmoa_difference_cfs[1] /(Flow_Diff_Monthly_Avg$nvgwmoa_difference_cfs[2] - Flow_Diff_Monthly_Avg$nvgwmoa_difference_cfs[1]))
 nvgwmoa_xintercept_2_cfs = 3 +(-Flow_Diff_Monthly_Avg$nvgwmoa_difference_cfs[3] /(Flow_Diff_Monthly_Avg$nvgwmoa_difference_cfs[4] - Flow_Diff_Monthly_Avg$nvgwmoa_difference_cfs[3]))
 nvgwmoa_geom_ribbon_data = data.frame(x = c(1,nvgwmoa_xintercept_1_cfs,2,3,nvgwmoa_xintercept_2_cfs,4,5,6,7,8,9,10,11,12),
                                        y = c(Flow_Diff_Monthly_Avg$nvgwmoa_difference_cfs[1], 0,Flow_Diff_Monthly_Avg$nvgwmoa_difference_cfs[2:3], 
                                              0, Flow_Diff_Monthly_Avg$nvgwmoa_difference_cfs[4:12]))
+nvia_xintercept_cfs = 3 +(-Flow_Diff_Monthly_Avg$nvia_difference_cfs[3] /(Flow_Diff_Monthly_Avg$nvia_difference_cfs[4] - Flow_Diff_Monthly_Avg$nvia_difference_cfs[3]))
+nvia_geom_ribbon_data = data.frame(x = c(1,2,3,nvia_xintercept_cfs,4,5,6,7,8,9,10,11,12),
+                                       y = c(Flow_Diff_Monthly_Avg$nvia_difference_cfs[1:3], 0, Flow_Diff_Monthly_Avg$nvia_difference_cfs[4:12])      )
+nvgwmia_xintercept_1_cfs = 1 +(-Flow_Diff_Monthly_Avg$nvgwmia_difference_cfs[1] /(Flow_Diff_Monthly_Avg$nvgwmia_difference_cfs[2] - Flow_Diff_Monthly_Avg$nvgwmia_difference_cfs[1]))
+nvgwmia_xintercept_2_cfs = 3 +(-Flow_Diff_Monthly_Avg$nvgwmia_difference_cfs[3] /(Flow_Diff_Monthly_Avg$nvgwmia_difference_cfs[4] - Flow_Diff_Monthly_Avg$nvgwmia_difference_cfs[3]))
+nvgwmia_geom_ribbon_data = data.frame(x = c(1,nvgwmia_xintercept_1_cfs,2,3,nvgwmia_xintercept_2_cfs,4,5,6,7,8,9,10,11,12),
+                                      y = c(Flow_Diff_Monthly_Avg$nvgwmia_difference_cfs[1], 0,Flow_Diff_Monthly_Avg$nvgwmia_difference_cfs[2:3], 
+                                            0, Flow_Diff_Monthly_Avg$nvgwmia_difference_cfs[4:12]))
+nv_xintercept_cfs = 3 +(-Flow_Diff_Monthly_Avg$nv_difference_cfs[3] /(Flow_Diff_Monthly_Avg$nv_difference_cfs[4] - Flow_Diff_Monthly_Avg$nv_difference_cfs[3]))
+nv_geom_ribbon_data = data.frame(x = c(1,2,3,nv_xintercept_cfs,4,5,6,7,8,9,10,11,12),
+                                   y = c(Flow_Diff_Monthly_Avg$nv_difference_cfs[1:3], 0, Flow_Diff_Monthly_Avg$nv_difference_cfs[4:12])      )
+nvgwm_xintercept_1_cfs = 1 +(-Flow_Diff_Monthly_Avg$nvgwm_difference_cfs[1] /(Flow_Diff_Monthly_Avg$nvgwm_difference_cfs[2] - Flow_Diff_Monthly_Avg$nvgwm_difference_cfs[1]))
+nvgwm_xintercept_2_cfs = 3 +(-Flow_Diff_Monthly_Avg$nvgwm_difference_cfs[3] /(Flow_Diff_Monthly_Avg$nvgwm_difference_cfs[4] - Flow_Diff_Monthly_Avg$nvgwm_difference_cfs[3]))
+nvgwm_geom_ribbon_data = data.frame(x = c(1,nvgwm_xintercept_1_cfs,2,3,nvgwm_xintercept_2_cfs,4,5,6,7,8,9,10,11,12),
+                                      y = c(Flow_Diff_Monthly_Avg$nvgwm_difference_cfs[1], 0,Flow_Diff_Monthly_Avg$nvgwm_difference_cfs[2:3], 
+                                            0, Flow_Diff_Monthly_Avg$nvgwm_difference_cfs[4:12]))
 
-nvoa_xintercept_cfs = 3 +(-Flow_Diff_Monthly_Avg$nvoa_difference_cfs[3] /(Flow_Diff_Monthly_Avg$nvoa_difference_cfs[4] - Flow_Diff_Monthly_Avg$nvoa_difference_cfs[3]))
-nvoa_geom_ribbon_data = data.frame(x = c(1,2,3,nvoa_xintercept_cfs,4,5,6,7,8,9,10,11,12),
-                                       y = c(Flow_Diff_Monthly_Avg$nvoa_difference_cfs[1:3], 0, Flow_Diff_Monthly_Avg$nvoa_difference_cfs[4:12])      )
-
-
+geom_ribbon_list = list(MAR_geom_ribbon_data,
+                        ILR_geom_ribbon_data,
+                        MAR_ILR_geom_ribbon_data,
+                        flowlims_geom_ribbon_data,
+                        MAR_ILR_Flowlims_geom_ribbon_data,
+                        irrig_0.8_geom_ribbon_data,
+                        irrig_0.9_geom_ribbon_data,
+                        nvoa_geom_ribbon_data,
+                        nvgwmoa_geom_ribbon_data,
+                        nvia_geom_ribbon_data,
+                        nvgwmia_geom_ribbon_data,
+                        nv_geom_ribbon_data,
+                        nvgwm_geom_ribbon_data)
 
 # Scenario-comparison metrics table ---------------------------------------
 
@@ -480,6 +531,129 @@ colnames_metrics = c(fall_days_gained_20cfs, monthly_flow_chg_avg_Sept_cfs, mont
 ############################                PLOTS                ############################
 #.############################################################################################
 #.############################################################################################
+
+#.############################################################################################
+####################        Universal plotter scripts       ####################
+#.############################################################################################
+
+
+# Type 1: Monthly streamflow difference, 28-yr avg
+head(Flow_Diff_Monthly_Avg)
+
+flow_diff_monthly_avg_fig = function(Flow_Diff_Monthly_Avg = Flow_Diff_Monthly_Avg,
+                                     geom_ribbon_data = MAR_geom_ribbon_data, 
+                                     scenario_colname = "MAR_difference_cfs"){
+  
+  scenario_yvals = Flow_Diff_Monthly_Avg[,scenario_colname]
+  sd_colname = paste(scenario_colname, "SD", sep = "_")
+  sd_yvals = Flow_Diff_Monthly_Avg[,sd_colname]
+  sd_min_yvals = scenario_yvals - sd_yvals
+  sd_max_yvals = scenario_yvals + sd_yvals
+  
+  monthly_avg_plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
+    geom_ribbon(data = geom_ribbon_data[1:4,], aes(x = x,ymin = y, ymax = 0), fill = 'red', alpha=  0.5) +
+    geom_ribbon(data = geom_ribbon_data[4:13,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) + 
+    geom_hline(yintercept = 0) +
+    ylab("Streamflow Difference (cfs)") +
+    geom_line(aes(x = seq(1,12), y = scenario_yvals, group = 1)) +
+    geom_errorbar(aes(x = seq(1,12), ymin = sd_min_yvals, 
+                      ymax = sd_max_yvals, group = 1), width = 0.25) +
+    geom_point(aes(x = seq(1,12), y = scenario_yvals, group = 1),size = 1.5) +
+    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
+    scale_y_continuous(limits = dif_lim, 
+                       breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+    theme(panel.background = element_blank(),
+          panel.border = element_rect(fill=NA, color = 'black'),
+          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+          axis.text.y = element_text(size = 8),
+          axis.ticks = element_line(size = 0.2),
+          plot.title = element_text(hjust = 0.5, size = 10),
+          axis.title.x = element_blank(),
+          axis.title.y = element_text(size = 8))
+  
+  return(monthly_avg_plot)
+}
+
+#Subset Flow Diff tables for Dry Avg Wet figures
+Flow_Diff_SP_Dry_Avg_Wet = subset(Flow_Diff_SP_Avg,#select = c('Date','MAR_difference_cfs', 'ILR_difference_cfs', 'MAR_ILR_difference_cfs'), 
+                                  Date %in%c(seq(as.Date("2010/1/1"), by = "month", length.out = 12),
+                                             seq(as.Date("2014/1/1"), by = "month", length.out = 12),
+                                             seq(as.Date("2017/1/1"), by = "month", length.out = 12)))
+Flow_Diff_SP_Dry_Avg_Wet$Year_Type = rep(c('Average (2010)','Dry (2014)','Wet (2017)'), each=12)
+Flow_Diff_SP_Dry_Avg_Wet$Year_Type = factor(Flow_Diff_SP_Dry_Avg_Wet$Year_Type, levels = c('Dry (2014)','Average (2010)','Wet (2017)'))
+Flow_Diff_SP_Dry_Avg_Wet = Flow_Diff_SP_Dry_Avg_Wet[order(Flow_Diff_SP_Dry_Avg_Wet$Year_Type),]
+Flow_Diff_SP_Dry_Avg_Wet$Date = format(Flow_Diff_SP_Dry_Avg_Wet$Date, '%m')
+
+
+flow_diff_DAW_fig = function(Flow_Diff_SP_Dry_Avg_Wet = Flow_Diff_SP_Dry_Avg_Wet,
+                             scenario_colname = "MAR_difference_cfs"){
+  scenario_yvals = Flow_Diff_SP_Dry_Avg_Wet[,scenario_colname]
+  # # sd_colname = paste(scenario_colname, "SD", sep = "_")
+  # # sd_yvals = Flow_Diff_SP_Dry_Avg_Wet[,sd_colname]
+  # sd_min_yvals = scenario_yvals - sd_yvals
+  # sd_max_yvals = scenario_yvals + sd_yvals
+  
+  
+  Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, 
+                                 aes(x = as.numeric(Date), y = scenario_yvals, group = Year_Type, color = Year_Type)) +
+     geom_hline(yintercept = 0) +
+     geom_line(size = 1) +
+     geom_point(size = 1.5) +
+     scale_y_continuous(limits = dif_lim, 
+                        breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
+     scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
+     theme(panel.background = element_blank(),
+           panel.border = element_rect(fill=NA, color = 'black'),
+           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+           axis.text.y = element_text(size = 8),
+           axis.ticks = element_line(size = 0.2),
+           plot.title = element_text(hjust = 0.5, size = 10),
+           axis.title.x = element_blank(),
+           axis.title.y = element_text(size = 8),
+           legend.key = element_blank(),
+           legend.title = element_blank(),
+           legend.position = c(0.80,0.15),
+           legend.background = element_blank())
+  
+  return(Dry_Avg_Wet_Diff_Plot)
+}
+
+
+for(i in 1:length(scenario_ids)){
+  scenario_id = scenario_ids[i]
+  if(to.lower(scenario_id) %in% c("mar","ilr", "mar_ilr")){scenario_id = toupper(scenario_id)}
+  scenario_colname = paste()
+  
+  fig_name = paste(scenario_id, "flow diff monthly avg.png")
+  png(fig_name, width = 7, height = 3, units = "in", res = 300)
+  
+  flow_diff_monthly_avg_fig(Flow_Diff_Monthly_Avg = Flow_Diff_Monthly_Avg,
+                            geom_ribbon_data = MAR_geom_ribbon_data,
+                            scenario_colname = "MAR_difference_cfs")
+  
+  flow_diff_DAW_fig(Flow_Diff_SP_Dry_Avg_Wet = Flow_Diff_SP_Dry_Avg_Wet,
+                    scenario_colname = "MAR_difference_cfs")
+  dev.off()
+}
+
+
+MAR_month_avg_diff_fig = flow_diff_monthly_avg_fig(Flow_Diff_Monthly_Avg = Flow_Diff_Monthly_Avg,
+                                                   geom_ribbon_data = MAR_geom_ribbon_data,
+                                                   scenario_colname = "MAR_difference_cfs")
+
+ILR_month_avg_diff_fig = flow_diff_monthly_avg_fig(Flow_Diff_Monthly_Avg = Flow_Diff_Monthly_Avg,
+                                                   geom_ribbon_data = ILR_geom_ribbon_data,
+                                                   scenario_colname = "ILR_difference_cfs")
+
+
+
+
+# Type 2: Monthly streamflow difference, wet avg dry
+
+# Type 3: Monthly streamflows, 28-yr avg
+
+# Type 4: Monthly streamflows, wet avg dry
 
 #.############################################################################################
 ####################        STRESS PERIOD AVERAGE DIFFERENCE PLOTS       ####################
