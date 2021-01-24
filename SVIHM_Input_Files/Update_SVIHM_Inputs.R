@@ -22,7 +22,7 @@ recharge_scenario = "Basecase" # Can be Basecase/MAR/ILR/MAR_ILR
 flow_scenario = "Basecase" # Can be Basecase/Flow_Lims. Flow limits on stream diversion specified in "available ratio" table.
 
 # Irrigation demand: Different from the kc_CROP_mult values in crop_coeff_mult.txt, which is used for calibrating.
-irr_demand_mult = .8 # Can be 1 (Basecase) or < 1 or > 1 (i.e., reduced or increased irrigation; assumes land use change)
+irr_demand_mult = 1 # Can be 1 (Basecase) or < 1 or > 1 (i.e., reduced or increased irrigation; assumes land use change)
 natveg_kc = 0.6 # Default: 0.6. Set at 1.0 for major natveg scenarios. 
 
 # Month and day of the final day of alfalfa irrigation season. 
@@ -32,6 +32,9 @@ alf_irr_stop_day = 31
 # Convert to month of wy (Oct=1, Nov=2, ..., Jul = 10, Aug=11, Sep=0)
 if(alf_irr_stop_mo<9){alf_irr_stop_mo = alf_irr_stop_mo + 3
 }else{alf_irr_stop_mo = alf_irr_stop_mo - 9}
+
+# Reservoir scenario
+reservoir_scenario = "South_Fork" #"Basecase" #"Shackleford","French", "Etna", "South_Fork"
 
 #Land use scenario. 
 landuse_scenario = "Basecase" #"major_natveg" # Default: Basecase. For attribution study: major_natveg
@@ -47,14 +50,17 @@ landuse_scenario = "Basecase" #"major_natveg" # Default: Basecase. For attributi
 # Overall scenario identifier. Also makes the directory name; must match folder
 # scenario_name = "basecase"
 # scenario_name = "mar_ilr" # "ilr" "mar"
-scenario_name = "irrig_0.8" #"flowlims" "irrig_0.9" "irrig_0.8" 
-# scenario_name = "alf_irr_stop_jul10" 
-# scenario_name = "alf_irr_stop_aug01" 
+# scenario_name = "mar_ilr_flowlims"#"flowlims"
+# scenario_name = "irrig_0.8"#"irrig_0.9" #
+# scenario_name = "alf_irr_stop_jul10"
+# scenario_name = "alf_irr_stop_aug01"
 # scenario_name = "natveg_outside_adj"
 # scenario_name = "natveg_gwmixed_outside_adj"
 # scenario_name = "natveg_inside_adj"
 # scenario_name = "natveg_gwmixed_inside_adj"
-
+# scenario_name = "natveg_all"
+# scenario_name = "natveg_gwmixed_all"
+scenario_name = "reservoir_sfork" # "reservoir_etna" "reservoir_sfork" "reservoir_shackleford"
 
 
 # SETUP -------------------------------------------------------------------
@@ -112,7 +118,7 @@ model_months = seq(from = model_start_date, to = model_end_date, by = "month")
 # Calculate number of days (time steps) in each month (stress period)
 model_end_date_plus_one = as.Date(paste(end_year, as.numeric(end_month)+1, end_day, sep = "-"))
 model_months_plus_one = seq(from = model_start_date, to = model_end_date_plus_one, by = "month")
-num_days = diff(model_months_plus_one) #number of days in each stress period/month
+num_days = as.numeric(diff(model_months_plus_one)) #number of days in each stress period/month
 
 num_stress_periods = length(model_months)
 
@@ -798,16 +804,123 @@ file.copy(from=file1, to = file2)
 # a) Update Fort Jones gauge record is Streamflow_Regression_Model folder, OR
 # b) build webscraper for latest stream data?
 # "https://waterdata.usgs.gov/ca/nwis/dv?cb_00060=on&format=rdb&site_no=11519500&referred_module=sw&period=&begin_date=1941-10-01&end_date=2019-05-19"
-#pull down from server, since it webscraped recently?
+#pull down from server, since it webscraped recently?;
 #THEN: change the Fort Jones USGS file reference in the Regression script.
 
-file1=file.path(Stream_Regression_dir,'streamflow_input.txt')
+# Pull streamflow_input file
+file1 = file.path(Stream_Regression_dir,'streamflow_input.txt')
 file2 = file.path(SWBM_file_dir, 'streamflow_input.txt')
+
 if(!file.exists(file1)){
   source(file.path(Stream_Regression_dir,'SVIHM_Streamflow_Regression_Model.R'))
   generate_streamflow_input_txt(end_date = model_end_date)
 }
-file.copy(file1, file2)
+
+if(reservoir_scenario %in% c("Basecase","basecase","BASECASE")){
+  file.copy(file1, file2)  #Keep basecase tributary input flows
+} else {
+  stm = read.table(file1, header = T)
+  
+  # Very simple reservoir simulation
+  
+  #Convert values to AF per day
+  stm_AFday = stm
+  m3day_to_AFday = 1/4046.86 * 3.28084
+  
+  convert_these_columns = grepl(pattern = "m3day", x = colnames(stm_AFday))
+  stm_AFday[,convert_these_columns] = stm[,convert_these_columns] * m3day_to_AFday
+  #update column names
+  colnames(stm_AFday)[convert_these_columns] = 
+    sub("m3day", "AFday" , colnames(stm_AFday)[convert_these_columns])
+  
+  #Reservoir parameters 
+  cfs_to_AFday = 2.29568411*10^-5 * 86400
+  cfs_goal = 30
+  D_daily = cfs_goal * cfs_to_AFday # Target demand during dry season (fish flow releases)
+  # Assume demand during the dry season is about 20 cfs for ~150 days (July 1 to Dec 1)
+  K = D_daily * 150 # Reservoir capacity. Rough estimate: low-flow releases for dry season.
+  # TO DO: check how realistic this would be (6 TAF capacity?)
+  
+  #Initialize inflow time series
+  Q_daily_avg = stm_AFday[,grepl(pattern = reservoir_scenario, x = colnames(stm_AFday))]
+  Q = Q_daily_avg * num_days # convert to monthly volume, AF/month
+  nmonth = length(Q) # number of months
+  
+  S = rep_len(0, nmonth)  # Storage
+  R = rep_len(0, nmonth)  # Discharge from reservoir
+  shortage = rep_len(0, nmonth)
+  
+  # S[1] = K # start simulation at full
+  # R[1] = D_daily*num_days[1]  # first month meets demand
+  # met_demand = 1  # counter
+  
+  S[1] = 0 # start simulation at empty
+  R[1] = 0 # 
+  met_demand = 0  # counter
+  
+  
+  for(t in 2:nmonth){
+    
+    # new storage: mass balance. Max value is K
+    S[t] = min(S[t-1] + Q[t-1] - R[t-1], K)
+    # Calculate monthly demand
+    D = D_daily*num_days[t]
+    
+    if(t%%12 %in% 0:3){
+      # In Dec-Mar, release the minimum (demand) until the reservoir is full, then let flow bypass reservoir
+      if(S[t] + Q[t] <= K){ 
+        R[t] = min(D, S[t]+Q[t])               # If storage + inflow is less than capacity, release minimum (D)
+      }else{
+        R[t] = S[t] + Q[t] - K # If storage is full or nearly full, release inflow or fraction of inflow
+      }
+    }
+    
+    if(t%%12 %in% 4:6){
+      # In Apr-June, let flow bypass reservoir for irrigation (but keep stored volume in reserve)
+        R[t] = Q[t]
+    }
+
+    if(t%%12 %in% 7:11){
+      # In July-Nov, release water (no test for low-flow threshold)
+      # release demand amount if enough water is available to meet demand
+      if((S[t] + Q[t]) > D){
+        R[t] = D
+        met_demand = met_demand + 1
+      } else {
+        # release all available water if not enough to meet demand
+        R[t] = S[t] + Q[t]
+      }
+    }
+    # after each month, calculate shortage
+    shortage[t] = max(D - R[t], 0)
+  }
+  
+  # Evaluate reservoir performance in terms of meeting flow release target
+  dry_months = sum(1:nmonth%%12 %in% 7:11) #number of months in which we want to meet demand
+  reliability = met_demand / dry_months
+  
+  # Plot inflow, discharge, and storage
+  plot(model_months, Q/num_days/cfs_to_AFday, type = "l", ylab = "Inflow, cfs")
+  plot(model_months, R/num_days/cfs_to_AFday, type = "l", ylab = "Discharge, cfs")
+  plot(model_months, S, type = "l", ylab = "Storage, AF", main = paste(reservoir_scenario, cfs_goal, "cfs demand"))
+  
+  # Revise streamflow_input.txt
+  
+  # Replace the inflow on the designated tributary with the outflow from the reservoir
+  replace_this_column = grepl(pattern = reservoir_scenario, x = colnames(stm_AFday))
+  stm_AFday[,replace_this_column] = R / num_days # convert to AF/day
+  
+  #Convert back to m3day
+  stm_m3day = stm_AFday
+  stm_m3day[,convert_these_columns] = stm_AFday[,convert_these_columns] / m3day_to_AFday
+  #update column names
+  colnames(stm_m3day)[convert_these_columns] = 
+    sub( "AFday", "m3day", colnames(stm_AFday)[convert_these_columns])
+  
+  
+  write.table(stm_m3day,file = file2, append = F, quote = F, row.names = F, col.names = T, sep = '\t')
+  
+}
 
 
 
@@ -1128,9 +1241,14 @@ file.copy(file.path(svihm_dir,"R_Files","Model",'Update_SVIHM_Starting_Heads.R')
 # flow_scenario = "Basecase" # Can be Basecase/Flow_Lims. Flow limits on stream diversion specified in "available ratio" table.
 # irr_demand_mult = 0.9 # Can be 1 (Basecase) or < 1 or > 1 (i.e., reduced or increased irrigation; assumes land use change)(increased irrigation)
 # 
-# # Scenario name for SWBM and MODFLOW
-# scenario_name = "irrig_0.9" #also makes the directory name; must match folder
-# 
+# # # Scenario name for SWBM and MODFLOW
+scenario_name = "reservoir_etna" #also makes the directory name; must match folder
+# # # 
+# # # New file architecture
+scenario_dir = file.path(svihm_dir, "Scenarios",scenario_name)
+SWBM_file_dir = scenario_dir
+MF_file_dir = scenario_dir
+
 # ## Directories for running the scenarios (files copied at end of script)
 # 
 # SWBM_file_dir = file.path(svihm_dir, "SWBM", scenario_name)
