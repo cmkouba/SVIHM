@@ -18,7 +18,7 @@ library(rgeos) # for buffer function
 # Scenario Selection ------------------------------------------------------
 
 # Recharge and flow scenarios
-recharge_scenario = "Basecase" # Can be Basecase/MAR/ILR/MAR_ILR
+recharge_scenario = "Basecase" # Can be Basecase/MAR/ILR/MAR_ILR/MAR_ILR_expanded
 flow_scenario = "Basecase" # Can be Basecase/Flow_Lims. Flow limits on stream diversion specified in "available ratio" table.
 
 # Irrigation demand: Different from the kc_CROP_mult values in crop_coeff_mult.txt, which is used for calibrating.
@@ -34,7 +34,7 @@ if(alf_irr_stop_mo<9){alf_irr_stop_mo = alf_irr_stop_mo + 3
 }else{alf_irr_stop_mo = alf_irr_stop_mo - 9}
 
 # Reservoir scenario
-reservoir_scenario = "South_Fork" #"Basecase" #"Shackleford","French", "Etna", "South_Fork"
+reservoir_scenario = "Shackleford" #"Basecase" #"Shackleford","French", "Etna", "South_Fork"
 
 #Land use scenario. 
 landuse_scenario = "Basecase" #"major_natveg" # Default: Basecase. For attribution study: major_natveg
@@ -60,7 +60,7 @@ landuse_scenario = "Basecase" #"major_natveg" # Default: Basecase. For attributi
 # scenario_name = "natveg_gwmixed_inside_adj"
 # scenario_name = "natveg_all"
 # scenario_name = "natveg_gwmixed_all"
-scenario_name = "reservoir_sfork" # "reservoir_etna" "reservoir_sfork" "reservoir_shackleford"
+scenario_name = "reservoir_shackleford" # "reservoir_etna" "reservoir_sfork" "reservoir_shackleford"
 
 
 # SETUP -------------------------------------------------------------------
@@ -140,13 +140,13 @@ num_stress_periods = length(model_months)
 # well_list_by_polygon.txt
 # well_summary.txt
 
-  copy_these_files = c( "daily_out.txt", 
-                        "irr_eff.txt", "MAR_Fields.txt",
+  copy_these_files = c( "daily_out.txt",  "irr_eff.txt", 
                        "No_Flow_SVIHM.txt", "Recharge_Zones_SVIHM.txt",
                        "well_list_by_polygon.txt", "well_summary.txt")
 
 if(landuse_scenario %in% c("basecase","Basecase")){ copy_these_files = c(copy_these_files, "polygons_table.txt")}
 if(natveg_kc==0.6){copy_these_files = c(copy_these_files, "crop_coeff_mult.txt")}
+if(tolower(recharge_scenario) != "mar_ilr_expanded"){ copy_these_files = c(copy_these_files, "MAR_Fields.txt")}
 
 
 setwd(time_indep_dir)
@@ -1242,7 +1242,7 @@ file.copy(file.path(svihm_dir,"R_Files","Model",'Update_SVIHM_Starting_Heads.R')
 # irr_demand_mult = 0.9 # Can be 1 (Basecase) or < 1 or > 1 (i.e., reduced or increased irrigation; assumes land use change)(increased irrigation)
 # 
 # # # Scenario name for SWBM and MODFLOW
-scenario_name = "reservoir_etna" #also makes the directory name; must match folder
+scenario_name = "reservoir_shackleford" #also makes the directory name; must match folder
 # # # 
 # # # New file architecture
 scenario_dir = file.path(svihm_dir, "Scenarios",scenario_name)
