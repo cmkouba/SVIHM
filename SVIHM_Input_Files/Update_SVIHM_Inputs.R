@@ -13,13 +13,14 @@ library(postGIStools) # pull from gis server
 library(rgeos) # for buffer function
 ## dates in R are treated as YYYY-MM-DD for convenience. Dates in the model input files are DD-MM-YYYY.
 
-# rm(list = ls())
+rm(list = ls())
 
 # Scenario Selection ------------------------------------------------------
 
 # Recharge and flow scenarios
-recharge_scenario = "Basecase" # Can be Basecase/MAR/ILR/MAR_ILR/MAR_ILR_expanded
-flow_scenario = "Basecase" # Can be Basecase/Flow_Lims. Flow limits on stream diversion specified in "available ratio" table.
+recharge_scenario = "MAR_ILR_max" # Can be Basecase/MAR/ILR/MAR_ILR/MAR_ILR_expanded
+    if(recharge_scenario == "MAR_ILR_max"){max_infil_rate_for_unknowns = 0.019}
+flow_scenario = "FlowLimsMAR" # Can be Basecase/Flow_Lims/FlowLimsMAR. Flow limits on stream diversion specified in "available ratio" table.
 
 # Irrigation demand: Different from the kc_CROP_mult values in crop_coeff_mult.txt, which is used for calibrating.
 irr_demand_mult = 1 # Can be 1 (Basecase) or < 1 or > 1 (i.e., reduced or increased irrigation; assumes land use change)
@@ -34,7 +35,7 @@ if(alf_irr_stop_mo<9){alf_irr_stop_mo = alf_irr_stop_mo + 3
 }else{alf_irr_stop_mo = alf_irr_stop_mo - 9}
 
 # Reservoir scenario
-reservoir_scenario = "Shackleford" #"Basecase" #"Shackleford","French", "Etna", "South_Fork"
+reservoir_scenario = "Basecase"#"French"#"Shackleford" #"Basecase" #"Shackleford","French", "Etna", "South_Fork"
 
 #Land use scenario. 
 landuse_scenario = "Basecase" #"major_natveg" # Default: Basecase. For attribution study: major_natveg
@@ -50,17 +51,19 @@ landuse_scenario = "Basecase" #"major_natveg" # Default: Basecase. For attributi
 # Overall scenario identifier. Also makes the directory name; must match folder
 # scenario_name = "basecase"
 # scenario_name = "mar_ilr" # "ilr" "mar"
+scenario_name = "mar_ilr_max_0.019" # Options: 0.035, 0.003, or 0.019 (the arithmetic mean) or 0.01 (the geometric mean)
 # scenario_name = "mar_ilr_flowlims"#"flowlims"
 # scenario_name = "irrig_0.8"#"irrig_0.9" #
 # scenario_name = "alf_irr_stop_jul10"
 # scenario_name = "alf_irr_stop_aug01"
+# scenario_name = "alf_irr_stop_aug15"
 # scenario_name = "natveg_outside_adj"
 # scenario_name = "natveg_gwmixed_outside_adj"
 # scenario_name = "natveg_inside_adj"
 # scenario_name = "natveg_gwmixed_inside_adj"
 # scenario_name = "natveg_all"
 # scenario_name = "natveg_gwmixed_all"
-scenario_name = "reservoir_shackleford" # "reservoir_etna" "reservoir_sfork" "reservoir_shackleford"
+# scenario_name = "reservoir_french_test" # "reservoir_etna" "reservoir_sfork" "reservoir_shackleford"
 
 
 # SETUP -------------------------------------------------------------------
@@ -140,13 +143,13 @@ num_stress_periods = length(model_months)
 # well_list_by_polygon.txt
 # well_summary.txt
 
-  copy_these_files = c( "daily_out.txt",  "irr_eff.txt", 
+  copy_these_files = c( "daily_out.txt",  "irr_eff.txt", "MAR_Fields.txt",
                        "No_Flow_SVIHM.txt", "Recharge_Zones_SVIHM.txt",
                        "well_list_by_polygon.txt", "well_summary.txt")
 
 if(landuse_scenario %in% c("basecase","Basecase")){ copy_these_files = c(copy_these_files, "polygons_table.txt")}
 if(natveg_kc==0.6){copy_these_files = c(copy_these_files, "crop_coeff_mult.txt")}
-if(tolower(recharge_scenario) != "mar_ilr_expanded"){ copy_these_files = c(copy_these_files, "MAR_Fields.txt")}
+# if(tolower(recharge_scenario) != "mar_ilr_expanded"){ copy_these_files = c(copy_these_files, "MAR_Fields.txt")}
 
 
 setwd(time_indep_dir)
@@ -762,6 +765,99 @@ write.table(kc_grain_df, file = file.path(SWBM_file_dir, "kc_grain.txt"),
 # sum(kc_grain_df$kc_grain_days[model_days < as.Date("2011-10-01")])
 
 
+
+# MAR_Fields.txt and polygons.txt----------------------------------------------------------
+
+if(tolower(recharge_scenario) == "mar_ilr_expanded"){
+  #Intention: "max out" the MAR and ILR artificial recharge capacity of the valley. bookend scenario.
+  
+  # Note: this does not preserve "notes" column
+  poly_column_classes = c(rep("integer",4),
+                          "numeric","integer","numeric","numeric",
+                          "integer","integer","character",
+                          rep("NULL",16)) # get rid of empty columns in the text file
+  
+  # Read in the existing polygons table (may have been amended for this scenario) to amend it further)
+  poly_tab = read.table(file.path(SWBM_file_dir,"polygons_table.txt"),
+                        header = T, comment.char = "!", 
+                        fill = T, sep = "\t", colClasses = poly_column_classes)
+  colnames(poly_tab) = c("Field_ID",colnames(poly_tab)[2:11])
+  
+  #Read in existing MAR fields in table form
+  mar_fields = read.table(file.path(time_indep_dir, "MAR_Fields.txt"), skip = 1, comment.char = "!")
+  colnames(mar_fields) = c("Field_ID","max_infil_m_day")
+  
+  # Designate all fields that have a surface water hookup as MAR and ILR fields.
+  # make water source color table
+  wat_source = c(1,2,3,4,5,999)
+  wat_source_descrip = c("SW","GW","Mixed", "Sub-irrigated","Dry","Unknown")
+  wat_source_color = c("dodgerblue","firebrick2","darkorchid1","green","yellow","gray")
+
+  wat_source_df = data.frame(ws_code = wat_source,
+                             descrip = wat_source_descrip,
+                             color = wat_source_color)
+  
+  # Check overlaps. Did Gus have MAR or ILR happening on some non-SW-accessing fields?
+  # Looks like yes.
+  # But for this scenario purpose we'll just assign MAR and ILR to surface water or mixed-source fields.
+  ilrs = poly_tab$Field_ID[poly_tab$ILR_Flag==1]
+  mars = mar_fields$Field_ID
+  sw_and_ms = poly_tab$Field_ID[poly_tab$Water_Source %in% c(1,3)]
+  gws = poly_tab$Field_ID[poly_tab$Water_Source ==2]
+
+  # length(intersect(mars, gws))
+  # length(intersect(mars, sw_and_ms))
+  #Initialize new table
+  poly_tab_amended = poly_tab
+  # Reset all SW-accessing fields to have an ILR flag
+  poly_tab_amended$ILR_Flag[poly_tab_amended$Field_ID %in% sw_and_ms] = 1
+  
+  #write amended polygons table
+  file.remove(file.path(SWBM_file_dir, "polygons_table.txt")) #get rid of old one
+  write.table(x = poly_tab_amended, quote = F,
+              file = file.path(SWBM_file_dir, "polygons_table.txt"),
+              sep = "\t",col.names=TRUE, row.names = F)
+  
+  
+  #Write new MAR_Fields.txt files
+  # List field IDs that have surface water access but aren't already in the MAR_Fields.txt file
+  new_mar_fields = sw_and_ms[!(sw_and_ms %in% mars)]
+  
+  #Prep other MAR_Fields.txt lines for updated number of fields
+  mar_fields_all_lines = readLines(file.path(time_indep_dir, "MAR_Fields.txt"))
+  mar_fields_line1 = mar_fields_all_lines[1]
+  mar_fields_other_lines = mar_fields_all_lines[2:length(mar_fields_all_lines)]
+  new_plus_old_mar_fields = length(mars)+length(new_mar_fields)
+  mar_fields_line1_amended = gsub(pattern = "32", x = mar_fields_line1,
+                                  as.character(new_plus_old_mar_fields))
+  
+  # 
+  file.remove(file.path(SWBM_file_dir, "MAR_Fields.txt"))
+  write.table(x = mar_fields_line1_amended,
+              file= file.path(SWBM_file_dir, "MAR_Fields.txt"), 
+              quote = F, row.names = F, col.names = F, sep = "  ",
+              append = F)
+  write.table(x = mar_fields_other_lines,
+              file= file.path(SWBM_file_dir, "MAR_Fields.txt"), 
+              quote = F, row.names = F, col.names = F, sep = "  ",
+              append = T)
+  
+  # Recharge rate decided up at top of scenario picking section
+  # Options: 0.035, 0.003, or 0.019 (the arithmetic mean) or 0.01 (the geometric mean)
+  # max_infil_rate_for_unknowns = 0.019
+  # Write those fields at the end of the file;
+  
+  mar_fields_txt_addendum = as.matrix(cbind(new_mar_fields, rep(max_infil_rate_for_unknowns, length(new_mar_fields))))
+  
+  # write amended MAR_Fields.txt
+  write.table(x = mar_fields_txt_addendum,
+              file= file.path(SWBM_file_dir, "MAR_Fields.txt"), 
+              quote = F, row.names = F, col.names = F, sep = "  ",
+              append = T)
+  
+}
+
+
 #  precip.txt ----------------------------------------------------
 
 #BEFORE USE: check to see that updated end model year propogates to analyses script (?)
@@ -967,6 +1063,9 @@ instream_rec$fj_flow_cfs = fjd$Flow[match(instream_rec$dates, fjd$Date)]
 cfs_to_m3d = 1/35.3147 * 86400 # 1 m3/x ft3 * x seconds/day
 instream_rec$cdfw_rec_flow_m3d = instream_rec$cdfw_rec_flow_cfs * cfs_to_m3d
 instream_rec$fj_flow_m3d = instream_rec$fj_flow_cfs * cfs_to_m3d
+# Calculate m3d available for expanded MAR+ILR scenario
+instream_rec$avail_m3d = instream_rec$fj_flow_m3d - instream_rec$cdfw_rec_flow_m3d
+instream_rec$avail_m3d[instream_rec$avail_m3d<0] = 0
 
 # Add the stress period and day of month 
 instream_rec$month = floor_date(instream_rec$dates, unit = "month")
@@ -991,6 +1090,15 @@ avail_monthly[,colnames(avail_monthly) != "avail_ratio"] = NULL
 
 write.table(avail_monthly, file = file.path(SWBM_file_dir, "instream_flow_available_ratio.txt"),
             sep = " ", quote = FALSE, col.names = F, row.names = FALSE)
+
+if(tolower(recharge_scenario)=="mar_ilr_max"){
+  avail_per_day = instream_rec$avail_m3d
+  # Write a daily available flow volume file
+  
+  write.table(avail_per_day, file = file.path(SWBM_file_dir, "instream_flow_available_m3d.txt"),
+              sep = " ", quote = FALSE, col.names = F, row.names = FALSE)
+  
+}
 
 # SWBM.exe ----------------------------------------------------------------
 
@@ -1242,7 +1350,7 @@ file.copy(file.path(svihm_dir,"R_Files","Model",'Update_SVIHM_Starting_Heads.R')
 # irr_demand_mult = 0.9 # Can be 1 (Basecase) or < 1 or > 1 (i.e., reduced or increased irrigation; assumes land use change)(increased irrigation)
 # 
 # # # Scenario name for SWBM and MODFLOW
-scenario_name = "reservoir_shackleford" #also makes the directory name; must match folder
+scenario_name = "mar_ilr_expanded_0.019_reservoir_french" #also makes the directory name; must match folder
 # # # 
 # # # New file architecture
 scenario_dir = file.path(svihm_dir, "Scenarios",scenario_name)

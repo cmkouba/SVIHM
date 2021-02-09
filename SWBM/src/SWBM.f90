@@ -29,20 +29,20 @@
   
   IMPLICIT NONE
 
-  INTEGER  :: nmonth, imonth, jday, i, im, ip, nrows, ncols
+  INTEGER  :: nmonth, imonth, im, jday, day_of_simulation, ndays_total, i, ip, nrows, ncols
   INTEGER  :: dummy, nsegs, n_wel_param, num_daily_out, unit_num, num_MAR_fields, alf_irr_stop_mo, alf_irr_stop_day
   INTEGER, ALLOCATABLE, DIMENSION(:,:) :: zone_matrix, no_flow_matrix, output_zone_matrix, ET_Zone_Cells
   REAL, ALLOCATABLE, DIMENSION(:,:) :: ET_Cells_ex_depth
   INTEGER, ALLOCATABLE, DIMENSION(:)   :: MAR_fields, ip_daily_out
   REAL   :: precip, Total_Ref_ET, MAR_vol
-  REAL, ALLOCATABLE, DIMENSION(:)  :: drain_flow, max_MAR_field_rate, moisture_save, available_instream_flow_ratio
+  REAL, ALLOCATABLE, DIMENSION(:)  :: drain_flow, max_MAR_field_rate, moisture_save, available_flow_ratio, available_flow_m3d
   REAL :: start, finish
   INTEGER, ALLOCATABLE, DIMENSION(:)  :: ndays
-  CHARACTER(9) :: param_dummy
+  CHARACTER(12) :: param_dummy, stream_diversion_limits
   CHARACTER(12)  :: SFR_Template, rch_scenario, flow_scenario, landuse_scenario, suffix
   CHARACTER(50), ALLOCATABLE, DIMENSION(:) :: daily_out_name
   INTEGER, DIMENSION(31) :: ET_Active
-  LOGICAL :: MAR_active, ILR_active, instream_limits_active, major_natveg_areas, daily_out_flag
+  LOGICAL :: MAR_active, ILR_active, major_natveg_areas, daily_out_flag
   DOUBLE PRECISION :: eff_precip
  
   call cpu_time(start)
@@ -64,7 +64,8 @@
   else if (trim(rch_scenario)=='ILR' .or. trim(rch_scenario)=='ilr') then
     MAR_active=  .FALSE.
   	ILR_active = .TRUE.
-  else if (trim(rch_scenario)=='MAR_ILR' .or. trim(rch_scenario)=='mar_ilr') then
+  else if (trim(rch_scenario)=='MAR_ILR' .or. trim(rch_scenario)=='mar_ilr' &
+    .or. trim(rch_scenario)=='MAR_ILR_MAX' .or. trim(rch_scenario)=='mar_ilr_max'.or. trim(rch_scenario)=='MAR_ILR_max') then
     MAR_active=  .TRUE.       
     ILR_active = .TRUE.    
   else if (trim(rch_scenario).ne.'basecase' .or. trim(rch_scenario).ne.'Basecase' .or. trim(rch_scenario).ne.'BASECASE' &  ! Exit program if incorrect recharge scenario type
@@ -78,14 +79,18 @@
   end if
 
   if (trim(flow_scenario)=='basecase' .or. trim(flow_scenario)=='Basecase' .or. trim(flow_scenario)=='BASECASE') then 
-    instream_limits_active = .FALSE.         ! Set logicals for Flow Scenario type 
-  else if (trim(flow_scenario)=='flow_lims' .or. trim(flow_scenario)=='Flow_Lims' &
-    .or. trim(flow_scenario)=='FLOW_LIMS')  then 
-      instream_limits_active = .TRUE.         
+    stream_diversion_limits = "none"         ! Set flags for Flow Scenario type 
+    else if (trim(flow_scenario)=='flow_lims' .or. trim(flow_scenario)=='Flow_Lims' &
+      .or. trim(flow_scenario)=='FLOW_LIMS')  then 
+        stream_diversion_limits = "all"   
+      else if (trim(flow_scenario)=='flowlimsmar' .or. trim(flow_scenario)=='FlowLimsMAR' &
+        .or. trim(flow_scenario)=='FLOWLIMSMAR')  then 
+          stream_diversion_limits = "mar"
   else if (trim(flow_scenario).ne.'basecase' .or. trim(flow_scenario).ne.'Basecase' &
     .or. trim(flow_scenario).ne.'BASECASE' .or. trim(flow_scenario).ne.'flow_lims' &
     .or. trim(flow_scenario).ne.'Flow_Lims' .or. trim(flow_scenario).ne.'FLOW_LIMS') then
       write(*,*)'Unknown flow scenario input in general_inputs.txt'
+      print*, flow_scenario
       write(800,*)'Unknown flow scenario input in general_inputs.txt'
       call EXIT
     end if
@@ -144,8 +149,8 @@
   read(213,*) dummy,nsegs 
   open(unit=214,file='ET_Zone_Cells.txt',status='old')      ! Read in 1-0 grid of cells with MODFLOW ET-from-groundwater zones
   read(214,*) ET_Zone_Cells 
-  open(unit=217,file='ET_Cells_Extinction_Depth.txt',status='old')      ! Read in extinction depths for MODFLOW ET-from-groundwater zones
-  read(217,*) ET_Cells_ex_depth 
+  open(unit=215,file='ET_Cells_Extinction_Depth.txt',status='old')      ! Read in extinction depths for MODFLOW ET-from-groundwater zones
+  read(215,*) ET_Cells_ex_depth 
 
   open(unit=888, file='stress_period_days.txt', status='old')      ! Read in vector with number of days in each stress period (month)
   read(888, *) ndays   
@@ -154,7 +159,7 @@
   close(212)
   close(213)
   close(214)
-  close(217)
+  close(215)
   close(888)
   
   call READ_KC_IRREFF                                ! Read in crop coefficients and irrigation efficiencies
@@ -163,25 +168,38 @@
   call read_well                                     ! Read in well info
   
   if (MAR_active) then
-    open(unit=215,file='MAR_Fields.txt',status='old')      ! Read in MAR recharge matrix
-    read(215,*) num_MAR_fields, MAR_vol
+    open(unit=216,file='MAR_Fields.txt',status='old')      ! Read in MAR recharge matrix
+    read(216,*) num_MAR_fields, MAR_vol
     ALLOCATE(MAR_fields(num_MAR_fields))                  ! Array of MAR field polygon IDs
     ALLOCATE(max_MAR_field_rate(num_MAR_fields))          ! Array of maximum infiltration rate for MAR fields (1/10th lowest SSURGO value)
     ALLOCATE(moisture_save(npoly))                        ! Array of soil-moisture needed to recalculate recharge for MAR fields
     moisture_save = 0.                                    ! Initialize array
     do i=1, num_MAR_fields
-      read(215,*)MAR_fields(i), max_MAR_field_rate(i)
+      read(216,*)MAR_fields(i), max_MAR_field_rate(i)
     end do
   end if
 
-  if (instream_limits_active) then
-    open(unit=216,file='instream_flow_available_ratio.txt') ! Read in available flow (inflow - CDFW recommended instream flows, m^3/month) (1 value for each month)
-    ALLOCATE(available_instream_flow_ratio(nmonth)) ! vector instream_flow_lim has 1 entry for each month (stress period) in model record
+  if (stream_diversion_limits=="all") then
+    open(unit=217,file='instream_flow_available_ratio.txt') ! Read in available flow (FJ flow - CDFW recommended instream flows, m^3/month) (1 value for each month)
+    ALLOCATE(available_flow_ratio(nmonth)) ! vector available_flow_ratio has 1 entry for each month (stress period) in model record
+    read(217,*) available_flow_ratio 
+    !write(*,*) "available_flow_ratio", available_flow_ratio
+    !write(800,*) "available_flow_ratio", available_flow_ratio
   end if
   
-  close(210) ! No unit = 210; delete?
-  close(212)
-  close(214) 
+  if (stream_diversion_limits == "mar") then
+    ndays_total = sum(ndays)
+    open(unit=218,file='instream_flow_available_m3d.txt') ! Read in available flow (FJ flow - CDFW recommended instream flows, m^3/day) (1 value for each day)
+    ALLOCATE(available_flow_m3d(ndays_total)) ! vector available_flow_m3d has 1 entry for each day in model record
+    read(218,*) available_flow_m3d 
+    !write(*,*) "available_flow_m3d", available_flow_m3d
+    !write(800,*) "available_flow_m3d", available_flow_m3d
+    
+  end if
+
+  close(216)
+  close(217)
+  close(218)
   
   open(unit=532,file='5daysdeficiency.dat')
 !  open(unit=887,file='precip_m_LowBias_July2017.txt')         ! Missing data assumed to have value of zero
@@ -344,10 +362,10 @@
        call zero_year                                ! Zero out yearly accumulated volume
      endif    
      read(220,*) drain_flow(im)                       ! Read drain flow into array
-     if(instream_limits_active) then                  
-      read(216, *) available_instream_flow_ratio(im)        ! Read monthly available instream flow ratio (% of divertible trib flow) into array
+     if(stream_diversion_limits =="all") then                  
+      read(217, *) available_flow_ratio(im)        ! Read monthly available instream flow ratio (% of divertible trib flow) into array
      end if
-     call read_streamflow(ndays(im), instream_limits_active, available_instream_flow_ratio(im))     ! Read in streamflow inputs
+     call read_streamflow(ndays(im), stream_diversion_limits, available_flow_ratio(im))     ! Read in streamflow inputs
 
      do jday=1, ndays(im)                         ! Loop over days in each month
        if (jday==1) monthly%ET_active = 0            ! Set ET counter to 0 at the beginning of the month. Used for turning ET on and off in MODFLOW so it is not double counted.    
@@ -386,9 +404,15 @@
 	       call RECHARGE(ip,eff_precip,jday,imonth,moisture_save,MAR_active)
 		     call deficiency_check(ip, imonth, jday)       
        enddo              ! End of polygon loop
-       if (MAR_active) then 
-         call MAR(imonth, num_MAR_fields, MAR_fields, max_MAR_field_rate, MAR_vol, eff_precip, jday, moisture_save)
-       end if
+
+       if (MAR_active) then
+         if(stream_diversion_limits == "mar" ) then     ! If applying CDFW flow limits to MAR surface diversions
+          day_of_simulation = sum(ndays(1:(im-1)))+jday
+          MAR_vol = available_flow_m3d(day_of_simulation) ! overwrite mar_vol with total available streamflow at FJ gauge for that day
+        end if
+        call MAR(imonth, num_MAR_fields, MAR_fields, max_MAR_field_rate, MAR_vol, eff_precip, jday, moisture_save)
+      end if
+
        if (daily_out_flag) call daily_out(num_daily_out,ip_daily_out, eff_precip)              ! Print Daily Output for Selected Fields
        call pumping(ip, jday, total_n_wells, npoly)   ! Stream depletion subroutine
 		   call monthly_SUM      ! add daily value to monthly total (e.g., monthly%irrigation = monthly%irrigation + daily%irrigation)

@@ -91,7 +91,7 @@ MODULE irrigationmodule
              end if
             end if
           end if 
-          if (alf_irr_stop_mo<3) then          ! If during irrigation season (test for alf_irr_stop_mo in Sep-Nov (imonth 0-2))
+          if (alf_irr_stop_mo<3) then          ! If the alfalfa irrigation season ends in Sep-Nov (imonth 0-2)
             if ((imonth==6 .and. jday.ge.25 ) .or. &    ! If  March 25 - March 31
             (imonth>6 .or. imonth<alf_irr_stop_mo) .or. & ! If month is April-Aug or if imonth is after Aug but before alf_irr_stop_mo
             (imonth == alf_irr_stop_mo .and. jday.le.alf_irr_stop_day)) then  ! If date is in last month of irrigation season but before ending day
@@ -282,7 +282,7 @@ MODULE irrigationmodule
   daily%MAR            = 0.                                ! Reset daily MAR array (linear)
   daily%MAR_vol        = 0.                                ! Reset daily MAR array (volumetric)
   
-  if (imonth==4 .or. imonth==5 .or. imonth==6) then
+  if (imonth==4 .or. imonth==5 .or. imonth==6) then        ! If Jan-March
     do iMAR=1, num_MAR_fields
       daily(MAR_fields(iMAR))%MAR = max_MAR_field_rate(iMAR)
       daily(MAR_fields(iMAR))%MAR_vol = daily(MAR_fields(iMAR))%MAR * poly(MAR_fields(iMAR))%area
@@ -352,20 +352,8 @@ MODULE irrigationmodule
         irreff_cp = irreff_cp_LU25
         if ((imonth==6 .and. jday.ge.25 ) .or. (imonth>6)) then  ! If  March 25 - August 31
           if ((daily(ip)%moisture.LT.(0.625*poly(ip)%WC8)) .or. (imonth==8 .and. jday.ge.15) .or. (imonth>8) .or. irrigating) then  ! If soil moisture is < 37.5% total soil moisture storage, or after May 15th, or 20% of fields have started irrigating  
-!        if ( &                                ! If during the irrigation season. Starts March 25. Default end is August 31. This code covers alfalfa irrigation stop April-Nov. 
-!        (imonth==6 .and. jday.ge.25) .or. &                                        ! If  March 25 - March 31
-!        (alf_irr_stop_mo>6 .and. imonth>6 .and. imonth<alf_irr_stop_mo) .or. &     ! If in middle months of season, when Alf Irr stops Apr1-Aug31, (imonths 7-11)
-!        (alf_irr_stop_mo<3 .and. (imonth>6  .or. imonth<alf_irr_stop_mo)) .or. &   ! If in middle months of season, when Alf Irr stops Sep1-Nov30, (imonths 0-2)
-!        (imonth==alf_irr_stop_mo .and. jday.le.alf_irr_stop_day) &                 ! If in the last month of the season
-!        ) then  
-!          if ( &
-!            (daily(ip)%moisture.LT.(0.625*poly(ip)%WC8)) .or. &                      ! If soil moisture is < 37.5% total soil moisture storage,
-!            (imonth==8 .and. jday.ge.15) .or. &                                      ! or if May 15-31, 
-!            (alf_irr_stop_mo>6 .and. imonth>8 .and. imonth<alf_irr_stop_mo) .or. &   ! or if after May, in middle months of season, when Alf Irr stops Apr1-Aug31, (imonths 7-11)
-!            (alf_irr_stop_mo<3 .and. (imonth>8  .or. imonth<alf_irr_stop_mo)) .or. & ! or if after May, in middle months season, when Alf Irr stops Sep-Nov, (imonths 0-2)
-!            (imonth==alf_irr_stop_mo .and. jday.le.alf_irr_stop_day) .or. &          ! or if in the last month of the season
-!            irrigating &                                                             ! or 20% of fields have started irrigating  
-!            ) then 
+
+
               call IRRIGATION_RULESET_ILR(imonth, jday, ip, irreff_wl, irreff_cp, eff_precip)
           end if
         end if
@@ -719,13 +707,12 @@ MODULE irrigationmodule
   end subroutine do_rotation
  
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  subroutine read_streamflow(numdays, instream_limits_active, instream_flow_available_ratio)
+  subroutine read_streamflow(numdays, stream_diversion_limits, instream_flow_available_ratio)
     
-    CHARACTER(10) :: date_dummy
+    CHARACTER(10) :: date_dummy, stream_diversion_limits
     DOUBLE PRECISION :: EF, SF, Sugar, French, Etna, Johnson, Crystal, Patterson, Kidder, Moffett, Mill, Shackleford
     REAL :: instream_flow_available_ratio
     INTEGER :: numdays
-    LOGICAL :: instream_limits_active
     
     streamflow_in = 0.         ! Reset all streamflow to zero
     sw_irr = 0.                ! Reset surface-water irrigation to zero
@@ -756,7 +743,7 @@ MODULE irrigationmodule
     if (isnan(Crystal_Ratio)) Crystal_Ratio= 0
     if (isnan(Patterson_Ratio)) Patterson_Ratio= 0
     
-    if(instream_limits_active) then
+    if(stream_diversion_limits == "all") then
       streamflow_avail = streamflow_in * instream_flow_available_ratio  ! Streamflow available for irrigation or diversions
     else
       streamflow_avail = streamflow_in

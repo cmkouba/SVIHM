@@ -94,7 +94,7 @@ plot_water_budget_overview = function(mwb, scenario_name, output_type = "pdf"){
   
   #Plot parameters
   vol_lim = c(min(mwb[2:7]), max(mwb[2:7]))
-  x_lim = c(1, 96) #x_lim = c(240, dim(mwb)[1])# x_lim = c(1, dim(mwb)[1])
+  x_lim = x_lim = c(240, dim(mwb)[1]) #c(1, 96) # x_lim = c(1, dim(mwb)[1])
   #Symbols and legend labels
   components = make_legend_symbol_table()
 
@@ -434,9 +434,9 @@ monthly_water_budget_basecase = read.table(file.path(swbm_scenario_dir,"basecase
 mwb_basecase = monthly_water_budget_basecase
 
 # Baseline, master 2019 version
-master_2019_dir = "C:/Users/Claire/Documents/GitHub/SVIHM_master_2019/Scenarios"
-monthly_water_budget_basecase_2019 = read.table(file.path(master_2019_dir,"basecase","monthly_water_budget.dat"), header = TRUE)
-mwb19_basecase = monthly_water_budget_basecase_2019
+# master_2019_dir = "C:/Users/Claire/Documents/GitHub/SVIHM_master_2019/Scenarios"
+# monthly_water_budget_basecase_2019 = read.table(file.path(master_2019_dir,"basecase","monthly_water_budget.dat"), header = TRUE)
+# mwb19_basecase = monthly_water_budget_basecase_2019
 
 #Baseline, accounting for drains
 # monthly_water_budget_basecase_drains = read.table(file.path(swbm_scenario_dir,"basecase_drains","monthly_water_budget.dat"), header = TRUE)
@@ -445,6 +445,12 @@ mwb19_basecase = monthly_water_budget_basecase_2019
 
 monthly_water_budget_alf_stop_jul10 = read.table(file.path(swbm_scenario_dir,"alf_irr_stop_jul10","monthly_water_budget.dat"), header = TRUE)
 mwb_asjul10 = monthly_water_budget_alf_stop_jul10
+
+monthly_water_budget_alf_stop_aug01 = read.table(file.path(swbm_scenario_dir,"alf_irr_stop_aug01","monthly_water_budget.dat"), header = TRUE)
+mwb_asaug01 = monthly_water_budget_alf_stop_aug01
+
+monthly_water_budget_alf_stop_aug15 = read.table(file.path(swbm_scenario_dir,"alf_irr_stop_aug15","monthly_water_budget.dat"), header = TRUE)
+mwb_asaug15 = monthly_water_budget_alf_stop_aug15
 
 # Read in native-veg-outside-adj-zone scenario
 
@@ -471,6 +477,10 @@ mwb_ilr = monthly_water_budget_ilr
 
 monthly_water_budget_mar_ilr = read.table(file.path(swbm_scenario_dir,"mar_ilr","monthly_water_budget.dat"), header = TRUE)
 mwb_mar_ilr = monthly_water_budget_mar_ilr 
+
+monthly_water_budget_mar_ilr_max = read.table(file.path(swbm_scenario_dir,"mar_ilr_expanded_0.019","monthly_water_budget.dat"), header = TRUE)
+mwb_mim = monthly_water_budget_mar_ilr_max
+
 
 #Read in flow-limits scenarios
 monthly_water_budget_flowlims = read.table(file.path(swbm_scenario_dir,"flowlims","monthly_water_budget.dat"), header = TRUE)
@@ -513,14 +523,18 @@ plot_water_budget_overview(mwb_mar, "MAR", output_type = "png")
 plot_water_budget_overview(mwb_ilr, "ILR", output_type = "png")
 plot_water_budget_overview(mwb_mar_ilr, "MAR_ILR", output_type = "png")
 
+plot_water_budget_overview(mwb_mim, "MAR_ILR_max_0.019", output_type = "png")
+
 plot_water_budget_overview(mwb_fl, "Basecase Irrigation with CDFW limits", output_type = "png")
 plot_water_budget_overview(mwb_mar_fl, "MAR with CDFW limits", output_type = "png")
 plot_water_budget_overview(mwb_ilr_fl, "ILR with CDFW limits", output_type = "png")
 plot_water_budget_overview(mwb_mar_ilr_fl, "MAR and ILR with CDFW limits", output_type = "png")
 
 plot_water_budget_overview(mwb_i0.8, "80 percent Irrigation Demand", output_type = "png")
+plot_water_budget_overview(mwb_i0.9, "90 percent Irrigation Demand", output_type = "png")
 
 plot_water_budget_overview(mwb_asjul10, "Alfalfa Irrigation ends Jul 10", output_type = "png")
+plot_water_budget_overview(mwb_asaug01, "Alfalfa Irrigation ends Aug 01", output_type = "png")
 plot_water_budget_overview(mwb_nvoa, "Native Veg Outside Adj", output_type = "png")
 
 
@@ -551,10 +565,10 @@ plot_water_budget_comparison(mwb_basecase, mwb_asjul10, c("Basecase", "Alfalfa I
 # scenario_ids = c("basecase","scb70", "scb80", "scb90")
 # mwbs = list(mwb_basecase, mwb_sca_95_07)
 # scenario_ids = c("basecase","sca_95_07")
-# mwbs = list(mwb_basecase, mwb_i0.9, mwb_i0.8)
-# scenario_ids = c("basecase","irrig_0.9","irrig_0.8")
-mwbs = list(mwb_basecase, mwb_asjul10)
-scenario_ids = c("basecase","asjul10")
+mwbs = list(mwb_basecase, mwb_i0.9, mwb_i0.8)
+scenario_ids = c("basecase","irrig_0.9","irrig_0.8")
+mwbs = list(mwb_basecase, mwb_asaug15, mwb_asaug01, mwb_asjul10)
+scenario_ids = c("basecase", "asaug15","asaug01","asjul10")
 
 
 mwbs = list(mwb_basecase, mwb_mar, mwb_ilr, mwb_mar_ilr,
