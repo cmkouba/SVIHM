@@ -1767,3 +1767,44 @@ current_dir = "C:/Users/Claire/Documents/GitHub/SVIHM/Scenarios/basecase_input_m
 # write.table(et_input_2, file = file.path(scenario_dev_dir, "ref_et_monthly.txt"),
 #             sep = " ", quote = FALSE, col.names = FALSE, row.names = FALSE)
 
+
+
+# SFR segment confirmation ------------------------------------------------
+
+
+#SFR munging. Still unsatisfying but can verify the segment numbers.
+
+dir_name = "C:/Users/Claire/Box/Scott_Only/Legacy Work Products/Scott_Legacy_GIS"
+layer_name = "SFR_Reaches_20180406"
+
+rch = readOGR(dsn = dir_name, layer = layer_name)
+rch$rowcollength = paste(rch$row, rch$col, round(rch$SHAPE_Leng,1), sep = "_")
+rch$rowcollength_nodec = paste(rch$row, rch$col, round(rch$SHAPE_Leng), sep = "_")
+# rch_rowcol_multiples = duplicated(x = rch$rowcol)
+# View(rch@data[rch_rowcol_multiples,])
+
+plot(rch)
+plot(rch[rch_rowcol_multiples,], col = "red", add=T,lwd=2)
+
+sfr_tab = read.csv(file.path(ref_data_dir, "SFR_Reaches_from_SFR_Template.csv"))
+sfr_tab$rowcollength = paste(sfr_tab$IRCH,sfr_tab$JRCH,round(sfr_tab$RCHLEN,1), sep = "_")
+sfr_tab$rowcollength_nodec = paste(sfr_tab$IRCH,sfr_tab$JRCH,round(sfr_tab$RCHLEN), sep = "_")
+
+sfr_tab_rowcollen_multiples = sfr_tab$rowcollength[duplicated(x = sfr_tab$rowcollength)]
+
+length(unique(sfr_tab$rowcollength))
+length(unique(rch$rowcollength))
+length(intersect(sfr_tab$rowcollength, rch$rowcollength))
+
+
+rch2 = sp::merge(x = rch, y = sfr_tab, by="rowcollength")
+
+rch2_nas = is.na(rch2$KRCH)
+View(rch2@data[rch2_nas,])
+intersect(rch2$rowcollength_nodec.x[rch2_nas], sfr_tab$rowcollength_nodec)
+# Can we fill in the gaps with the no-decimal version?
+# (To do, maybe)
+
+plot(rch2[rch2$ISEG == 9,], add=T, col = "green")
+
+plot(rch2[rch2$ISEG == 12,], add=T, col = "green")

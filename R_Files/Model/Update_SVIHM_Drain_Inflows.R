@@ -1,6 +1,6 @@
 rm(list=ls())  #Clear workspace
-nstress = 252
-StartingMonths = seq(as.Date("1990/10/1"), by = "month", length.out = 253)
+nstress = 336
+StartingMonths = seq(as.Date("1990/10/1"), by = "month", length.out = nstress+1)
 num_days = diff(as.numeric(StartingMonths))
 LST_Name = list.files(pattern = 'lst')
 InputText = readLines(LST_Name)  #Read in text file

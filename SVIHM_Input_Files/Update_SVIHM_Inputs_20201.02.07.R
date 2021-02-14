@@ -13,14 +13,13 @@ library(postGIStools) # pull from gis server
 library(rgeos) # for buffer function
 ## dates in R are treated as YYYY-MM-DD for convenience. Dates in the model input files are DD-MM-YYYY.
 
-rm(list = ls())
+# rm(list = ls())
 
 # Scenario Selection ------------------------------------------------------
 
 # Recharge and flow scenarios
-recharge_scenario = "Basecase" # Can be Basecase/MAR/ILR/MAR_ILR/MAR_ILR_max
-    if(recharge_scenario == "MAR_ILR_max"){max_infil_rate_for_unknowns = 0.035}
-flow_scenario = "Basecase" # Can be Basecase/Flow_Lims/FlowLimsMAR. Flow limits on stream diversion specified in "available ratio" table.
+recharge_scenario = "Basecase" # Can be Basecase/MAR/ILR/MAR_ILR/MAR_ILR_expanded
+flow_scenario = "Basecase" # Can be Basecase/Flow_Lims. Flow limits on stream diversion specified in "available ratio" table.
 
 # Irrigation demand: Different from the kc_CROP_mult values in crop_coeff_mult.txt, which is used for calibrating.
 irr_demand_mult = 1 # Can be 1 (Basecase) or < 1 or > 1 (i.e., reduced or increased irrigation; assumes land use change)
@@ -35,12 +34,7 @@ if(alf_irr_stop_mo<9){alf_irr_stop_mo = alf_irr_stop_mo + 3
 }else{alf_irr_stop_mo = alf_irr_stop_mo - 9}
 
 # Reservoir scenario
-reservoir_scenario = "Basecase"#"French"#"Shackleford" #"Basecase" #"Shackleford","French", "Etna", "South_Fork"
-reservoir_plus_pipeline = FALSE    # set pipeline status
-
-# BDAs scenario
-BDAs_scenario = "Tributaries" # Can be Basecase/Tributaries/All_Streams/Scott_R_Mainstem
-if(tolower(BDAs_scenario) != "basecase"){ stream_bed_elev_increase = 0.5} # set average stream bed elevation increase
+reservoir_scenario = "Shackleford" #"Basecase" #"Shackleford","French", "Etna", "South_Fork"
 
 #Land use scenario. 
 landuse_scenario = "Basecase" #"major_natveg" # Default: Basecase. For attribution study: major_natveg
@@ -56,21 +50,18 @@ landuse_scenario = "Basecase" #"major_natveg" # Default: Basecase. For attributi
 # Overall scenario identifier. Also makes the directory name; must match folder
 # scenario_name = "basecase"
 # scenario_name = "mar_ilr" # "ilr" "mar"
-# scenario_name = "mar_ilr_max_0.019" # Options: 0.035, 0.003, or 0.019 (the arithmetic mean) or 0.01 (the geometric mean)
 # scenario_name = "mar_ilr_flowlims"#"flowlims"
 # scenario_name = "irrig_0.8"#"irrig_0.9" #
 # scenario_name = "alf_irr_stop_jul10"
 # scenario_name = "alf_irr_stop_aug01"
-# scenario_name = "alf_irr_stop_aug15"
 # scenario_name = "natveg_outside_adj"
 # scenario_name = "natveg_gwmixed_outside_adj"
 # scenario_name = "natveg_inside_adj"
 # scenario_name = "natveg_gwmixed_inside_adj"
 # scenario_name = "natveg_all"
 # scenario_name = "natveg_gwmixed_all"
-# scenario_name = "reservoir_french_30" # "reservoir_etna" "reservoir_sfork" "reservoir_shackleford"
-# scenario_name = "reservoir_pipeline_french"
-scenario_name = "bdas_tribs" # "bdas_all_streams" "bdas_scott_r_mainstem
+scenario_name = "reservoir_shackleford" # "reservoir_etna" "reservoir_sfork" "reservoir_shackleford"
+
 
 # SETUP -------------------------------------------------------------------
 
@@ -149,13 +140,13 @@ num_stress_periods = length(model_months)
 # well_list_by_polygon.txt
 # well_summary.txt
 
-  copy_these_files = c( "daily_out.txt",  "irr_eff.txt", "MAR_Fields.txt",
+  copy_these_files = c( "daily_out.txt",  "irr_eff.txt", 
                        "No_Flow_SVIHM.txt", "Recharge_Zones_SVIHM.txt",
                        "well_list_by_polygon.txt", "well_summary.txt")
 
 if(landuse_scenario %in% c("basecase","Basecase")){ copy_these_files = c(copy_these_files, "polygons_table.txt")}
 if(natveg_kc==0.6){copy_these_files = c(copy_these_files, "crop_coeff_mult.txt")}
-# if(tolower(recharge_scenario) != "mar_ilr_expanded"){ copy_these_files = c(copy_these_files, "MAR_Fields.txt")}
+if(tolower(recharge_scenario) != "mar_ilr_expanded"){ copy_these_files = c(copy_these_files, "MAR_Fields.txt")}
 
 
 setwd(time_indep_dir)
@@ -176,8 +167,8 @@ file.copy(from = file.path(ref_data_dir,"Discharge_Zone_Cells.txt"),
  # SVIHM_WEL_template.txt
 
  
-copy_these_files = c("SFR_PEST_TPL.txt", "SFR_UCODE_JTF.txt", "SVIHM_SFR_template.txt",
-                     "SVIHM_ETS_template.txt", 'SVIHM_WEL_template.txt')
+copy_these_files = c("SFR_PEST_TPL.txt", "SFR_UCODE_JTF.txt", "SVIHM_ETS_template.txt", 
+                     "SVIHM_SFR_template.txt", 'SVIHM_WEL_template.txt')
 
 setwd(time_indep_dir)
 file.copy(copy_these_files, SWBM_file_dir)
@@ -771,113 +762,20 @@ write.table(kc_grain_df, file = file.path(SWBM_file_dir, "kc_grain.txt"),
 # sum(kc_grain_df$kc_grain_days[model_days < as.Date("2011-10-01")])
 
 
-
-# MAR_Fields.txt and polygons.txt----------------------------------------------------------
-
-if(tolower(recharge_scenario) == "mar_ilr_max"){
-  #Intention: "max out" the MAR and ILR artificial recharge capacity of the valley. bookend scenario.
-  
-  # Note: this does not preserve "notes" column
-  poly_column_classes = c(rep("integer",4),
-                          "numeric","integer","numeric","numeric",
-                          "integer","integer","character",
-                          rep("NULL",16)) # get rid of empty columns in the text file
-  
-  # Read in the existing polygons table (may have been amended for this scenario) to amend it further)
-  poly_tab = read.table(file.path(SWBM_file_dir,"polygons_table.txt"),
-                        header = T, comment.char = "!", 
-                        fill = T, sep = "\t", colClasses = poly_column_classes)
-  colnames(poly_tab) = c("Field_ID",colnames(poly_tab)[2:11])
-  
-  #Read in existing MAR fields in table form
-  mar_fields = read.table(file.path(time_indep_dir, "MAR_Fields.txt"), skip = 1, comment.char = "!")
-  colnames(mar_fields) = c("Field_ID","max_infil_m_day")
-  
-  # Designate all fields that have a surface water hookup as MAR and ILR fields.
-  # make water source color table
-  wat_source = c(1,2,3,4,5,999)
-  wat_source_descrip = c("SW","GW","Mixed", "Sub-irrigated","Dry","Unknown")
-  wat_source_color = c("dodgerblue","firebrick2","darkorchid1","green","yellow","gray")
-
-  wat_source_df = data.frame(ws_code = wat_source,
-                             descrip = wat_source_descrip,
-                             color = wat_source_color)
-  
-  # Check overlaps. Did Gus have MAR or ILR happening on some non-SW-accessing fields?
-  # Looks like yes.
-  # But for this scenario purpose we'll just assign MAR and ILR to surface water or mixed-source fields.
-  ilrs = poly_tab$Field_ID[poly_tab$ILR_Flag==1]
-  mars = mar_fields$Field_ID
-  sw_and_ms = poly_tab$Field_ID[poly_tab$Water_Source %in% c(1,3)]
-  gws = poly_tab$Field_ID[poly_tab$Water_Source ==2]
-
-  # length(intersect(mars, gws))
-  # length(intersect(mars, sw_and_ms))
-  #Initialize new table
-  poly_tab_amended = poly_tab
-  # Reset all SW-accessing fields to have an ILR flag
-  poly_tab_amended$ILR_Flag[poly_tab_amended$Field_ID %in% sw_and_ms] = 1
-  
-  #write amended polygons table
-  file.remove(file.path(SWBM_file_dir, "polygons_table.txt")) #get rid of old one
-  write.table(x = poly_tab_amended, quote = F,
-              file = file.path(SWBM_file_dir, "polygons_table.txt"),
-              sep = "\t",col.names=TRUE, row.names = F)
-  
-  
-  #Write new MAR_Fields.txt files
-  # List field IDs that have surface water access but aren't already in the MAR_Fields.txt file
-  new_mar_fields = sw_and_ms[!(sw_and_ms %in% mars)]
-  
-  #Prep other MAR_Fields.txt lines for updated number of fields
-  mar_fields_all_lines = readLines(file.path(time_indep_dir, "MAR_Fields.txt"))
-  mar_fields_line1 = mar_fields_all_lines[1]
-  mar_fields_other_lines = mar_fields_all_lines[2:length(mar_fields_all_lines)]
-  new_plus_old_mar_fields = length(mars)+length(new_mar_fields)
-  mar_fields_line1_amended = gsub(pattern = "32", x = mar_fields_line1,
-                                  as.character(new_plus_old_mar_fields))
-  
-  # 
-  file.remove(file.path(SWBM_file_dir, "MAR_Fields.txt"))
-  write.table(x = mar_fields_line1_amended,
-              file= file.path(SWBM_file_dir, "MAR_Fields.txt"), 
-              quote = F, row.names = F, col.names = F, sep = "  ",
-              append = F)
-  write.table(x = mar_fields_other_lines,
-              file= file.path(SWBM_file_dir, "MAR_Fields.txt"), 
-              quote = F, row.names = F, col.names = F, sep = "  ",
-              append = T)
-  
-  # Recharge rate decided up at top of scenario picking section
-  # Options: 0.035, 0.003, or 0.019 (the arithmetic mean) or 0.01 (the geometric mean)
-  # max_infil_rate_for_unknowns = 0.019
-  # Write those fields at the end of the file;
-  
-  mar_fields_txt_addendum = as.matrix(cbind(new_mar_fields, rep(max_infil_rate_for_unknowns, length(new_mar_fields))))
-  
-  # write amended MAR_Fields.txt
-  write.table(x = mar_fields_txt_addendum,
-              file= file.path(SWBM_file_dir, "MAR_Fields.txt"), 
-              quote = F, row.names = F, col.names = F, sep = "  ",
-              append = T)
-  
-}
-
-
 #  precip.txt ----------------------------------------------------
 
 #BEFORE USE: check to see that updated end model year propogates to analyses script (?)
 
-filename1=file.path(scenario_dev_dir,"precip_regressed.txt")
-filename2=file.path(SWBM_file_dir,"precip.txt")
+file1=file.path(scenario_dev_dir,"precip_regressed.txt")
+file2=file.path(SWBM_file_dir,"precip.txt")
 
-if(!file.exists(filename1)){
+if(!file.exists(file1)){
   declare_dir_in_analyses_script = FALSE #Prevents the input_analyses script from overwriting SWBM_dir
   source(file.path(input_files_dir,'SVIHM_input_analyses.R'))
   write_swbm_precip_input_file()
 }
 
-file.copy(from=filename1, to = filename2, overwrite=T)
+file.copy(from=file1, to = file2, overwrite=T)
 
 
 
@@ -888,19 +786,19 @@ file.copy(from=filename1, to = filename2, overwrite=T)
 # declare_dir_in_analyses_script = FALSE #Prevents the input_analyses script from overwriting directories
 # source(file.path(input_files_dir,'SVIHM_input_analyses.R'))
 
-filename1=file.path(scenario_dev_dir,"ref_et_monthly.txt")
-filename2=file.path(SWBM_file_dir,"ref_et.txt")
+file1=file.path(scenario_dev_dir,"ref_et_monthly.txt")
+file2=file.path(SWBM_file_dir,"ref_et.txt")
 
-if(!file.exists(filename1)){
+if(!file.exists(file1)){
   declare_dir_in_analyses_script = FALSE #Prevents the input_analyses script from overwriting SWBM_dir
   source(file.path(input_files_dir,'SVIHM_input_analyses.R'))
   write_swbm_et_input_file()
 }
 
-file.copy(from=filename1, to = filename2)
+file.copy(from=file1, to = file2)
 
 
-#  streamflow_input.txt and available flow ratio ------------------------------------------
+#  streamflow_input.txt ------------------------------------------
 
 # To update, EITHER: 
 # a) Update Fort Jones gauge record is Streamflow_Regression_Model folder, OR
@@ -910,18 +808,18 @@ file.copy(from=filename1, to = filename2)
 #THEN: change the Fort Jones USGS file reference in the Regression script.
 
 # Pull streamflow_input file
-filename1 = file.path(Stream_Regression_dir,'streamflow_input.txt')
-filename2 = file.path(SWBM_file_dir, 'streamflow_input.txt')
+file1 = file.path(Stream_Regression_dir,'streamflow_input.txt')
+file2 = file.path(SWBM_file_dir, 'streamflow_input.txt')
 
-if(!file.exists(filename1)){
+if(!file.exists(file1)){
   source(file.path(Stream_Regression_dir,'SVIHM_Streamflow_Regression_Model.R'))
   generate_streamflow_input_txt(end_date = model_end_date)
 }
 
 if(reservoir_scenario %in% c("Basecase","basecase","BASECASE")){
-  file.copy(filename1, filename2)  #Keep basecase tributary input flows
+  file.copy(file1, file2)  #Keep basecase tributary input flows
 } else {
-  stm = read.table(filename1, header = T)
+  stm = read.table(file1, header = T)
   
   # Very simple reservoir simulation
   
@@ -941,7 +839,7 @@ if(reservoir_scenario %in% c("Basecase","basecase","BASECASE")){
   D_daily = cfs_goal * cfs_to_AFday # Target demand during dry season (fish flow releases)
   # Assume demand during the dry season is about 20 cfs for ~150 days (July 1 to Dec 1)
   K = D_daily * 150 # Reservoir capacity. Rough estimate: low-flow releases for dry season.
-  # TO DO: check how realistic this would be (9 TAF capacity?)
+  # TO DO: check how realistic this would be (6 TAF capacity?)
   
   #Initialize inflow time series
   Q_daily_avg = stm_AFday[,grepl(pattern = reservoir_scenario, x = colnames(stm_AFday))]
@@ -949,8 +847,7 @@ if(reservoir_scenario %in% c("Basecase","basecase","BASECASE")){
   nmonth = length(Q) # number of months
   
   S = rep_len(0, nmonth)  # Storage
-  R = rep_len(0, nmonth)  # Discharge from reservoir to stream
-  P = rep_len(0, nmonth)  # Discharge from reservoir to pipeline 
+  R = rep_len(0, nmonth)  # Discharge from reservoir
   shortage = rep_len(0, nmonth)
   
   # S[1] = K # start simulation at full
@@ -959,59 +856,44 @@ if(reservoir_scenario %in% c("Basecase","basecase","BASECASE")){
   
   S[1] = 0 # start simulation at empty
   R[1] = 0 # 
-  P[1] = 0
   met_demand = 0  # counter
   
   
   for(t in 2:nmonth){
     
     # new storage: mass balance. Max value is K
-    S[t] = min(S[t-1] + Q[t-1] - R[t-1] - P[t-1], K)
+    S[t] = min(S[t-1] + Q[t-1] - R[t-1], K)
     # Calculate monthly demand
     D = D_daily*num_days[t]
     
-    
     if(t%%12 %in% 0:3){
-      # In Dec-Mar, release the minimum (demand) to the STREAM until the reservoir is full, then let flow bypass reservoir
+      # In Dec-Mar, release the minimum (demand) until the reservoir is full, then let flow bypass reservoir
       if(S[t] + Q[t] <= K){ 
-        R[t] = min(D, S[t]+Q[t])               # If storage + inflow is less than capacity, release demand or all avail. water to stream
-        P[t] = 0                               # No pipeline releases in winter months
+        R[t] = min(D, S[t]+Q[t])               # If storage + inflow is less than capacity, release minimum (D)
       }else{
         R[t] = S[t] + Q[t] - K # If storage is full or nearly full, release inflow or fraction of inflow
-        P[t] = 0                               # No pipeline releases in winter months
       }
     }
     
     if(t%%12 %in% 4:6){
       # In Apr-June, let flow bypass reservoir for irrigation (but keep stored volume in reserve)
         R[t] = Q[t]
-        P[t] = 0                               # No pipeline releases in growing season months
     }
 
     if(t%%12 %in% 7:11){
       # In July-Nov, release water (no test for low-flow threshold)
-      # release demand amount to PIPELINE if enough water is available to meet demand
-      # Hold back remaining water; no releases to stream unless reservoir is full
-      
-      if((S[t] + Q[t]) > D & (S[t] + Q[t] - D) < K){
-        P[t] = D
-        R[t] = 0
-        met_demand = met_demand + 1
-      } else if((S[t] + Q[t]) > D & (S[t] + Q[t] - D) > K) { # If the reservoir is full, release demand to pipeline and overage to stream
-        P[t] = D
-        R[t] = (S[t] + Q[t] - D) - K
+      # release demand amount if enough water is available to meet demand
+      if((S[t] + Q[t]) > D){
+        R[t] = D
         met_demand = met_demand + 1
       } else {
-        # release all available water to pipeline if not enough to meet demand
-        P[t] = S[t] + Q[t]
-        R[t] = 0
+        # release all available water if not enough to meet demand
+        R[t] = S[t] + Q[t]
       }
     }
     # after each month, calculate shortage
-    shortage[t] = max(D - P[t], 0)
+    shortage[t] = max(D - R[t], 0)
   }
-  
-  if(reservoir_plus_pipeline == FALSE) {R = R+P} #If no pipeline, all discharge went through the stream
   
   # Evaluate reservoir performance in terms of meeting flow release target
   dry_months = sum(1:nmonth%%12 %in% 7:11) #number of months in which we want to meet demand
@@ -1019,29 +901,8 @@ if(reservoir_scenario %in% c("Basecase","basecase","BASECASE")){
   
   # Plot inflow, discharge, and storage
   plot(model_months, Q/num_days/cfs_to_AFday, type = "l", ylab = "Inflow, cfs")
-  plot(model_months, R/num_days/cfs_to_AFday, type = "l", ylab = "Stream Discharge, cfs")
-  plot(model_months, P/num_days/cfs_to_AFday, type = "l", ylab = "Pipeline Discharge, cfs")
+  plot(model_months, R/num_days/cfs_to_AFday, type = "l", ylab = "Discharge, cfs")
   plot(model_months, S, type = "l", ylab = "Storage, AF", main = paste(reservoir_scenario, cfs_goal, "cfs demand"))
-  
-  # #Diagnostic plots: Plot inflow, discharge, and storage for 3 years
-  # start_month = 12*12+1
-  # plot(model_months[start_month + 1:36], Q[start_month+1:36]/num_days[start_month+1:36]/cfs_to_AFday, type = "o", ylab = "Inflow, cfs")
-  # abline(v=model_months[as.integer(seq(from=4, by=12, length.out=28))], col = "green4", lwd = 2, lty = 2)
-  # abline(v=model_months[as.integer(seq(from=7, by=12, length.out=28))], col = "orange", lwd = 2, lty = 2)
-  # abline(v=model_months[as.integer(seq(from=12, by=12, length.out=28))], col = "dodgerblue", lwd = 2, lty = 2)
-  # plot(model_months[start_month+1:36], R[start_month+1:36]/num_days[start_month+1:36]/cfs_to_AFday, type = "o", ylab = "Stream Discharge, cfs")
-  # lines(model_months[start_month+1:36], P[start_month+1:36]/num_days[start_month+1:36]/cfs_to_AFday, col = "brown", ylab = "Pipeline Discharge, cfs")
-  # abline(v=model_months[as.integer(seq(from=4, by=12, length.out=28))], col = "green4", lwd = 2, lty = 2)
-  # abline(v=model_months[as.integer(seq(from=7, by=12, length.out=28))], col = "orange", lwd = 2, lty = 2)
-  # abline(v=model_months[as.integer(seq(from=12, by=12, length.out=28))], col = "dodgerblue", lwd = 2, lty = 2)
-  # plot(model_months[start_month+1:36], P[start_month+1:36]/num_days[start_month+1:36]/cfs_to_AFday, type = "o", ylab = "Pipeline Discharge, cfs")
-  # abline(v=model_months[as.integer(seq(from=4, by=12, length.out=28))], col = "green4", lwd = 2, lty = 2)
-  # abline(v=model_months[as.integer(seq(from=7, by=12, length.out=28))], col = "orange", lwd = 2, lty = 2)
-  # abline(v=model_months[as.integer(seq(from=12, by=12, length.out=28))], col = "dodgerblue", lwd = 2, lty = 2)
-  # plot(model_months[start_month+1:36], S[start_month+1:36], type = "l", ylab = "Storage, AF", main = paste(reservoir_scenario, cfs_goal, "cfs demand"))
-  # abline(v=model_months[as.integer(seq(from=4, by=12, length.out=28))], col = "green4", lwd = 2, lty = 2)
-  # abline(v=model_months[as.integer(seq(from=7, by=12, length.out=28))], col = "orange", lwd = 2, lty = 2)
-  # abline(v=model_months[as.integer(seq(from=12, by=12, length.out=28))], col = "dodgerblue", lwd = 2, lty = 2)
   
   # Revise streamflow_input.txt
   
@@ -1057,21 +918,13 @@ if(reservoir_scenario %in% c("Basecase","basecase","BASECASE")){
     sub( "AFday", "m3day", colnames(stm_AFday)[convert_these_columns])
   
   
-  write.table(stm_m3day,file = filename2, append = F, quote = F, row.names = F, col.names = T, sep = '\t')
-  
-  #Convert P to m3day
-  if(reservoir_plus_pipeline == TRUE){
-    P_m3day = round(P / num_days / m3day_to_AFday,2)
-    filename3 = file.path(SWBM_file_dir, paste0("pipe_flow_",reservoir_scenario,".txt"))
-
-    write.table(P_m3day, file = filename3, row.names = F, col.names = F) 
-  }
+  write.table(stm_m3day,file = file2, append = F, quote = F, row.names = F, col.names = T, sep = '\t')
   
 }
 
 
 
-#__ instream_flow_available_ratio.txt ------------------------------------------------
+# instream_flow_available_ratio.txt ------------------------------------------------
 
 #read in FJ flow and CDFW recommended flow for FJ gauge
 library(dataRetrieval)
@@ -1114,9 +967,6 @@ instream_rec$fj_flow_cfs = fjd$Flow[match(instream_rec$dates, fjd$Date)]
 cfs_to_m3d = 1/35.3147 * 86400 # 1 m3/x ft3 * x seconds/day
 instream_rec$cdfw_rec_flow_m3d = instream_rec$cdfw_rec_flow_cfs * cfs_to_m3d
 instream_rec$fj_flow_m3d = instream_rec$fj_flow_cfs * cfs_to_m3d
-# Calculate m3d available for expanded MAR+ILR scenario
-instream_rec$avail_m3d = instream_rec$fj_flow_m3d - instream_rec$cdfw_rec_flow_m3d
-instream_rec$avail_m3d[instream_rec$avail_m3d<0] = 0
 
 # Add the stress period and day of month 
 instream_rec$month = floor_date(instream_rec$dates, unit = "month")
@@ -1141,59 +991,6 @@ avail_monthly[,colnames(avail_monthly) != "avail_ratio"] = NULL
 
 write.table(avail_monthly, file = file.path(SWBM_file_dir, "instream_flow_available_ratio.txt"),
             sep = " ", quote = FALSE, col.names = F, row.names = FALSE)
-
-if(tolower(recharge_scenario)=="mar_ilr_max"){
-  avail_per_day = instream_rec$avail_m3d
-  # Write a daily available flow volume file
-  
-  write.table(avail_per_day, file = file.path(SWBM_file_dir, "instream_flow_available_m3d.txt"),
-              sep = " ", quote = FALSE, col.names = F, row.names = FALSE)
-  
-}
-
-
-# SVIHM_SFR_template.txt --------------------------------------------------
-
-if(tolower(BDAs_scenario)!="basecase"){
-  # raise the elevation of the parts of the stream system where you want there to be BDAs
-  
-  sfr_template_line1 = readLines(file.path(SWBM_file_dir, "SVIHM_SFR_template.txt"), n=1)
-  sfr_template = read.table(file.path(SWBM_file_dir, "SVIHM_SFR_template.txt"), skip = 1)
-  
-  colnames_sfr_template = c("KRCH", "IRCH", "JRCH", "ISEG","IREACH", "RCHLEN",
-                             "STRTOP","SLOPE","STRTHICK","STRHC1")
-  colnames(sfr_template) = colnames_sfr_template
-  
-  tribs_segments = c(1, 2, 6, 7, 11, 15, 16, 18, 19, 21, 24, 27, 28) 
-  no_inflow_tribs = c(8, 13, 17, 20, 22, 29)
-  scott_river_segments = c(3, 4, 5, 9, 10, 12, 14, 23, 25, 26, 30)
-  
-  # set the stream reaches on which you want to build BDAs
-  if(tolower(BDAs_scenario)=="tributaries"){
-    change_these_elevs = sfr_template$ISEG %in% tribs_segments
-  } else if(tolower(BDAs_scenario)=="scott_r_mainstem"){
-    change_these_elevs = sfr_template$ISEG %in% scott_river_segments
-  } else if(tolower(BDAs_scenario)=="all_streams"){
-    change_these_elevs = sfr_template$ISEG %in% unique(sfr_template$ISEG)
-  }
-  
-  # initialize new table of SFR segments
-  sfr_template_amended = sfr_template
-  
-  sfr_template_amended$STRTOP[change_these_elevs] = 
-    sfr_template_amended$STRTOP[change_these_elevs] + stream_bed_elev_increase
-  filler_col = rep("", nrow(sfr_template_amended))
-  sfr_template_amended$filler = filler_col
-  sfr_template_amended = sfr_template_amended[,c("filler", colnames_sfr_template)]
-  
-  write.table(sfr_template_line1,
-              file.path(SWBM_file_dir, "SVIHM_SFR_template.txt"), quote = F, col.names = F, row.names = F)
-  write.table(sfr_template_amended,
-              file.path(SWBM_file_dir, "SVIHM_SFR_template.txt"), 
-              quote = F, col.names = F, row.names = F, append = T, sep = "  ")
-  
-
-}
 
 # SWBM.exe ----------------------------------------------------------------
 
@@ -1432,15 +1229,10 @@ file.copy(file.path(svihm_dir,"MODFLOW",'MF_OWHM.exe'), MF_file_dir)
 
 # Run_SVIHM_forward.bat and input update R scripts ---------------------------------------------------
 
-if(reservoir_plus_pipeline == FALSE){file.copy(file.path(svihm_dir,"Batch_Scripts",'Run_SVIHM_forward.bat'), MF_file_dir)}
-if(reservoir_plus_pipeline == TRUE){
-  file.copy(file.path(svihm_dir,"Batch_Scripts",'Run_SVIHM_forward_res_w_pipe.bat'), MF_file_dir)
-  file.copy(file.path(svihm_dir,"R_Files","Model",'Add_Reservoir_Pipe_Releases_to_SFR_Inputs.R'), MF_file_dir)
-  # Don't forget to change the working directory in this file
-}
-  file.copy(file.path(svihm_dir,"R_Files","Model",'Update_SVIHM_Drain_Inflows.R'), MF_file_dir)
-  file.copy(file.path(svihm_dir,"R_Files","Model",'Update_SVIHM_Starting_Heads.R'), MF_file_dir)
-  
+file.copy(file.path(svihm_dir,"Batch_Scripts",'Run_SVIHM_forward.bat'), MF_file_dir)
+file.copy(file.path(svihm_dir,"R_Files","Model",'Update_SVIHM_Drain_Inflows.R'), MF_file_dir)
+file.copy(file.path(svihm_dir,"R_Files","Model",'Update_SVIHM_Starting_Heads.R'), MF_file_dir)
+
 
 # OPTIONAL: copy output to Results folder for post-processing -------------
 
@@ -1450,7 +1242,7 @@ if(reservoir_plus_pipeline == TRUE){
 # irr_demand_mult = 0.9 # Can be 1 (Basecase) or < 1 or > 1 (i.e., reduced or increased irrigation; assumes land use change)(increased irrigation)
 # 
 # # # Scenario name for SWBM and MODFLOW
-# scenario_name = "mar_ilr_expanded_0.019_reservoir_french" #also makes the directory name; must match folder
+scenario_name = "reservoir_shackleford" #also makes the directory name; must match folder
 # # # 
 # # # New file architecture
 scenario_dir = file.path(svihm_dir, "Scenarios",scenario_name)
@@ -1464,24 +1256,18 @@ MF_file_dir = scenario_dir
 
 #Copy flow tables on the mainstem
 file.copy(from = file.path(MF_file_dir,"Streamflow_FJ_SVIHM.dat"),
-          to = file.path(results_dir,paste0("Streamflow_FJ_SVIHM_",scenario_name,".dat")),
-          overwrite=T)
+          to = file.path(results_dir,paste0("Streamflow_FJ_SVIHM_",scenario_name,".dat")))
 file.copy(from = file.path(MF_file_dir,"Streamflow_Pred_Loc_2.dat"), 
-          to = file.path(results_dir,paste0("Streamflow_Pred_Loc_2_",scenario_name,".dat")),
-          overwrite=T)
+          to = file.path(results_dir,paste0("Streamflow_Pred_Loc_2_",scenario_name,".dat")))
 file.copy(from = file.path(MF_file_dir,"Streamflow_Pred_Loc_3.dat"), 
-          to = file.path(results_dir,paste0("Streamflow_Pred_Loc_3_",scenario_name,".dat")),
-          overwrite=T)
+          to = file.path(results_dir,paste0("Streamflow_Pred_Loc_3_",scenario_name,".dat")))
 
 file.copy(from = file.path(MF_file_dir,"SVIHM.sfr"), 
-          to = file.path(results_dir,paste0("SVIHM_",scenario_name,".sfr")),
-          overwrite=T)
+          to = file.path(results_dir,paste0("SVIHM_",scenario_name,".sfr")))
 file.copy(from = file.path(SWBM_file_dir,"monthly_groundwater_by_luse.dat"), 
-          to = file.path(results_dir,paste0("monthly_groundwater_by_luse_",scenario_name,".dat")),
-          overwrite=T)
+          to = file.path(results_dir,paste0("monthly_groundwater_by_luse_",scenario_name,".dat")))
 file.copy(from = file.path(SWBM_file_dir,"monthly_deficiency_by_luse.dat"), 
-          to = file.path(results_dir,paste0("monthly_deficiency_by_luse_",scenario_name,".dat")),
-          overwrite=T)
+          to = file.path(results_dir,paste0("monthly_deficiency_by_luse_",scenario_name,".dat")))
 
 
 

@@ -649,8 +649,8 @@ end subroutine monthly_pumping
   REAL, DIMENSION(nmonth) :: drain_flow
   
   
-  seg(:,1) = (/1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32/)    ! SFR Segment Number [nseg]
-  seg(:,2) = (/3,3,4,5,9,8,8,9,10,12,12,14,14,23,17,17,19,19,22,26,22,23,25,25,26,30,29,29,30,0,0,0/)      ! SFR Inflow Segment [outseg]
+  seg(:,1) = (/1,2,3,4,5,6,7,8, 9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32/)    ! SFR Segment Number [nseg]
+  seg(:,2) = (/3,3,4,5,9,8,8,9,10,12,12,14,14,23,17,17,19,19,22,26,22,23,25,25,26,30,29,29,30, 0, 0, 0/)      ! SFR Inflow Segment [outseg]
   SR_width = 25
   Trib_width = 10
 
@@ -664,6 +664,8 @@ end subroutine monthly_pumping
   end if
   
   do j = 1, nsegs
+    ! MODFLOW values written in this section:
+    ! NSEG ICALC OUTSEG IUPSEG FLOW RUNOFF ETSW PPTSW
     if (j==1) then  ! EF + SF Inflow  	    
       write(213,'(I3,A3,I3,A3,es10.2,A16)')j,'  1', seg(j,2),'  0',SFR_Flows(1),'  0  0  0  0.035'
       write(213,'(I4)')SR_width
