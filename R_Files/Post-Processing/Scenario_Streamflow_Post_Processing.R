@@ -20,16 +20,23 @@ library(tidyr)
 # scenario_ids = c("MAR_ILR","mar_ilr_flowlims", "irrig_0.8", "irrig_0.9")
 # scenario_ids = c("Basecase","irrig_0.8","irrig_0.9")
 # scenario_ids = c("Basecase","alf_ir_stop_jul10")
-scenario_ids = c("MAR","ILR","MAR_ILR","mar_ilr_flowlims",
+
+# Scenario ids should correspond to folder names
+scenario_ids = c("basecase",
+                 "mar","ilr","mar_ilr","mar_ilr_flowlims",
                  "mar_ilr_max_0.003","mar_ilr_max_0.019","mar_ilr_max_0.035",
                  "irrig_0.8","irrig_0.9",
-                 "alf_irr_jul10","alf_irr_aug01","alf_irr_aug15",
-                 "nvoa", "nvgwmoa",
-                 "nvia","nvgwmia",
-                 "nv","nvgwm",
-                 "res_shackleford", "res_etna",
-                 "res_french", "res_sfork")
-
+                 "alf_irr_stop_jul10","alf_irr_stop_aug01","alf_irr_stop_aug15",
+                 "natveg_outside_adj", "natveg_gwmixed_outside_adj",
+                 "natveg_inside_adj","natveg_gwmixed_inside_adj",
+                 "natveg_all","natveg_gwmixed_all",
+                 "reservoir_shackleford", "reservoir_etna",
+                 "reservoir_french", "reservoir_sfork",
+                 "reservoir_pipeline_etna", "reservoir_pipeline_french",
+                 "bdas_tribs"
+                 # ,"bdas_all_streams","bdas_scott_r"
+                 )
+n_scenarios = length(scenario_ids)
 
 # COMPARE_MAR = TRUE
 # COMPARE_ILR = TRUE
@@ -43,6 +50,7 @@ graphics_type = 'png'    #output type for graphics, currently pdf or png
 
 results_dir = "C:/Users/Claire/Documents/GitHub/SVIHM/R_Files/Post-Processing/Results"
 setwd(results_dir)
+scenario_dir = "C:/Users/Claire/Documents/GitHub/SVIHM/Scenarios"
 start_date = as.Date("1990-10-01")
 end_date = as.Date("2018-09-30")
 start_wy = 1991
@@ -55,106 +63,21 @@ dif_lim = c(-120,200) #standard for all scenarios
 ############################             IMPORT DATA             ############################
 #.############################################################################################
 
-  DP_Basecase_flow = data.frame(Date = seq(start_date, end_date, "days"),                         # Import Basecase flow data
-                                Flow_m3day = read.table(paste0(flow_loc,"_basecase.dat"), skip = 2)[,3],
-                                Flow_cfs = read.table(paste0(flow_loc,"_basecase.dat"), skip = 2)[,3]*0.000408734569)
 
-  DP_MAR_flow = data.frame(Date = seq(start_date, end_date, "days"),                              # Import MAR flow data
-                           Flow_m3day = read.table(paste0(flow_loc,'_MAR.dat'), skip = 2)[,3],
-                           Flow_cfs = read.table(paste0(flow_loc,'_MAR.dat'), skip = 2)[,3]*0.000408734569)
-  DP_ILR_flow = data.frame(Date = seq(start_date, end_date, "days"),                              # Import ILR flow data
-                           Flow_m3day = read.table(paste0(flow_loc,'_ILR.dat'), skip = 2)[,3],
-                           Flow_cfs = read.table(paste0(flow_loc,'_ILR.dat'), skip = 2)[,3]*0.000408734569)
-  DP_MAR_ILR_flow = data.frame(Date = seq(start_date, end_date, "days"),                          # Import MAR_ILR flow data
-                               Flow_m3day = read.table(paste0(flow_loc,'_MAR_ILR.dat'), skip = 2)[,3],
-                               Flow_cfs = read.table(paste0(flow_loc,'_MAR_ILR.dat'), skip = 2)[,3]*0.000408734569)
-  
-  DP_MAR_ILR_max_0.003_flow = data.frame(Date = seq(start_date, end_date, "days"),                          # Import MAR_ILR_max flow data
-                                         Flow_m3day = read.table(paste0(flow_loc,'_MAR_ILR_max_0.003.dat'), skip = 2)[,3],
-                                         Flow_cfs = read.table(paste0(flow_loc,'_MAR_ILR_max_0.003.dat'), skip = 2)[,3]*0.000408734569)
-  DP_MAR_ILR_max_0.019_flow = data.frame(Date = seq(start_date, end_date, "days"),                          # Import MAR_ILR_max flow data
-                               Flow_m3day = read.table(paste0(flow_loc,'_MAR_ILR_max_0.019.dat'), skip = 2)[,3],
-                               Flow_cfs = read.table(paste0(flow_loc,'_MAR_ILR_max_0.019.dat'), skip = 2)[,3]*0.000408734569)
-  DP_MAR_ILR_max_0.035_flow = data.frame(Date = seq(start_date, end_date, "days"),                          # Import MAR_ILR_max flow data
-                                         Flow_m3day = read.table(paste0(flow_loc,'_MAR_ILR_max_0.035.dat'), skip = 2)[,3],
-                                         Flow_cfs = read.table(paste0(flow_loc,'_MAR_ILR_max_0.035.dat'), skip = 2)[,3]*0.000408734569)
-  
-  DP_Basecase_fl_flow = data.frame(Date = seq(start_date, end_date, "days"),                         # Import Basecase flow data
-                                   Flow_m3day = read.table(paste0(flow_loc,'_flowlims.dat'), skip = 2)[,3],
-                                   Flow_cfs = read.table(paste0(flow_loc,'_flowlims.dat'), skip = 2)[,3]*0.000408734569)
-  # DP_MAR_fl_flow = data.frame(Date = seq(start_date, end_date, "days"),                              # Import MAR flow data
-  #                          Flow_m3day = read.table(paste0(flow_loc,'MAR_flowlims.dat'), skip = 2)[,3],
-  #                          Flow_cfs = read.table(paste0(flow_loc,'MAR_flowlims.dat'), skip = 2)[,3]*0.000408734569)
-  # DP_ILR_fl_flow = data.frame(Date = seq(start_date, end_date, "days"),                              # Import ILR flow data
-  #                          Flow_m3day = read.table(paste0(flow_loc,'ILR_flowlims.dat'), skip = 2)[,3],
-  #                          Flow_cfs = read.table(paste0(flow_loc,'ILR_flowlims.dat'), skip = 2)[,3]*0.000408734569)
-  DP_MAR_ILR_fl_flow = data.frame(Date = seq(start_date, end_date, "days"),                          # Import MAR_ILR flow data
-                                  Flow_m3day = read.table(paste0(flow_loc,'_MAR_ILR_flowlims.dat'), skip = 2)[,3],
-                                  Flow_cfs = read.table(paste0(flow_loc,'_MAR_ILR_flowlims.dat'), skip = 2)[,3]*0.000408734569)
-  
-  # Reduced irrigation demand scenarios
-  DP_0.8_flow = data.frame(Date = seq(start_date, end_date, "days"),                              # Import ILR flow data
-                           Flow_m3day = read.table(paste0(flow_loc,'_irrig_0.8.dat'), skip = 2)[,3],
-                           Flow_cfs = read.table(paste0(flow_loc,'_irrig_0.8.dat'), skip = 2)[,3]*0.000408734569)
-  DP_0.9_flow = data.frame(Date = seq(start_date, end_date, "days"),                              # Import ILR flow data
-                           Flow_m3day = read.table(paste0(flow_loc,'_irrig_0.9.dat'), skip = 2)[,3],
-                           Flow_cfs = read.table(paste0(flow_loc,'_irrig_0.9.dat'), skip = 2)[,3]*0.000408734569)
-  
-  #Alf Irr stop dates
-  DP_alf_irr_jul10_flow = data.frame(Date = seq(start_date, end_date, "days"), 
-                                     Flow_m3day = read.table(paste0(flow_loc,'_alf_irr_stop_jul10.dat'), skip = 2)[,3],
-                                     Flow_cfs = read.table(paste0(flow_loc,'_alf_irr_stop_jul10.dat'), skip = 2)[,3]*0.000408734569)
-  DP_alf_irr_aug01_flow = data.frame(Date = seq(start_date, end_date, "days"),
-                                     Flow_m3day = read.table(paste0(flow_loc,'_alf_irr_stop_aug01.dat'), skip = 2)[,3],
-                                     Flow_cfs = read.table(paste0(flow_loc,'_alf_irr_stop_aug01.dat'), skip = 2)[,3]*0.000408734569)
-  DP_alf_irr_aug15_flow = data.frame(Date = seq(start_date, end_date, "days"),
-                                     Flow_m3day = read.table(paste0(flow_loc,'_alf_irr_stop_aug15.dat'), skip = 2)[,3],
-                                     Flow_cfs = read.table(paste0(flow_loc,'_alf_irr_stop_aug15.dat'), skip = 2)[,3]*0.000408734569)
-  
-  # "turn off pumping" or nat veg in some areas
-  DP_natveg_outside_adj_flow = data.frame(Date = seq(start_date, end_date, "days"), 
-                                               Flow_m3day = read.table(paste0(flow_loc,'_natveg_outside_adj.dat'), skip = 2)[,3],
-                                               Flow_cfs = read.table(paste0(flow_loc,'_natveg_outside_adj.dat'), skip = 2)[,3]*0.000408734569)
-  
-  DP_natveg_gwmixed_outside_adj_flow = data.frame(Date = seq(start_date, end_date, "days"), 
-                                                       Flow_m3day = read.table(paste0(flow_loc,'_natveg_gwmixed_outside_adj.dat'), skip = 2)[,3],
-                                                       Flow_cfs = read.table(paste0(flow_loc,'_natveg_gwmixed_outside_adj.dat'), skip = 2)[,3]*0.000408734569)
-  
-  DP_natveg_inside_adj_flow = data.frame(Date = seq(start_date, end_date, "days"), 
-                                          Flow_m3day = read.table(paste0(flow_loc,'_natveg_inside_adj.dat'), skip = 2)[,3],
-                                          Flow_cfs = read.table(paste0(flow_loc,'_natveg_inside_adj.dat'), skip = 2)[,3]*0.000408734569)
-  
-  DP_natveg_gwmixed_inside_adj_flow = data.frame(Date = seq(start_date, end_date, "days"),
-                                                  Flow_m3day = read.table(paste0(flow_loc,'_natveg_gwmixed_inside_adj.dat'), skip = 2)[,3],
-                                                  Flow_cfs = read.table(paste0(flow_loc,'_natveg_gwmixed_inside_adj.dat'), skip = 2)[,3]*0.000408734569)
-  
-  DP_natveg_all_flow = data.frame(Date = seq(start_date, end_date, "days"), 
-                                         Flow_m3day = read.table(paste0(flow_loc,'_natveg_all.dat'), skip = 2)[,3],
-                                         Flow_cfs = read.table(paste0(flow_loc,'_natveg_all.dat'), skip = 2)[,3]*0.000408734569)
-  
-  DP_natveg_gwmixed_all_flow = data.frame(Date = seq(start_date, end_date, "days"),
-                                                 Flow_m3day = read.table(paste0(flow_loc,'_natveg_gwmixed_all.dat'), skip = 2)[,3],
-                                                 Flow_cfs = read.table(paste0(flow_loc,'_natveg_gwmixed_all.dat'), skip = 2)[,3]*0.000408734569)
-  
-  DP_reservoir_shackleford_flow = data.frame(Date = seq(start_date, end_date, "days"),
-                                             Flow_m3day = read.table(paste0(flow_loc,'_reservoir_shackleford.dat'), skip = 2)[,3],
-                                             Flow_cfs = read.table(paste0(flow_loc,'_reservoir_shackleford.dat'), skip = 2)[,3]*0.000408734569)
-  DP_reservoir_etna_flow = data.frame(Date = seq(start_date, end_date, "days"),
-                                        Flow_m3day = read.table(paste0(flow_loc,'_reservoir_etna.dat'), skip = 2)[,3],
-                                        Flow_cfs = read.table(paste0(flow_loc,'_reservoir_etna.dat'), skip = 2)[,3]*0.000408734569)
-  DP_reservoir_french_flow = data.frame(Date = seq(start_date, end_date, "days"),
-                                        Flow_m3day = read.table(paste0(flow_loc,'_reservoir_french_30.dat'), skip = 2)[,3],
-                                        Flow_cfs = read.table(paste0(flow_loc,'_reservoir_french_30.dat'), skip = 2)[,3]*0.000408734569)
-  DP_reservoir_sfork_flow = data.frame(Date = seq(start_date, end_date, "days"),
-                                      Flow_m3day = read.table(paste0(flow_loc,'_reservoir_sfork.dat'), skip = 2)[,3],
-                                      Flow_cfs = read.table(paste0(flow_loc,'_reservoir_sfork.dat'), skip = 2)[,3]*0.000408734569)
-  DP_reservoir_pipe_etna_flow = data.frame(Date = seq(start_date, end_date, "days"),
-                                      Flow_m3day = read.table(paste0(flow_loc,'_reservoir_pipeline_etna.dat'), skip = 2)[,3],
-                                      Flow_cfs = read.table(paste0(flow_loc,'_reservoir_pipeline_etna.dat'), skip = 2)[,3]*0.000408734569)
-  DP_reservoir_pipe_french_flow = data.frame(Date = seq(start_date, end_date, "days"),
-                                        Flow_m3day = read.table(paste0(flow_loc,'_reservoir_pipeline_french.dat'), skip = 2)[,3],
-                                        Flow_cfs = read.table(paste0(flow_loc,'_reservoir_pipeline_french_30.dat'), skip = 2)[,3]*0.000408734569)
-  
+#Import flow data for scenarios
+DP_flows_scenarios = list()
+for(i in 1:length(scenario_ids)){
+  scenario_id = scenario_ids[i]
+  scenario_filename = file.path(scenario_dir, scenario_id,paste0(flow_loc,".dat"))
+  print(scenario_filename)
+  DP_flow_scenario = data.frame(Date = seq(start_date, end_date, "days"), 
+                                Flow_m3day = read.table(scenario_filename, skip = 2)[,3],
+                                Flow_cfs = read.table(scenario_filename, skip = 2)[,3]*0.000408734569)
+  DP_flows_scenarios[[i]] = DP_flow_scenario 
+}
+names(DP_flows_scenarios) = scenario_ids
+
+
 # Make a table for Thomas and his fish reconnection estimate -------------------------------------------------
   
   making_this_table = F
@@ -186,7 +109,7 @@ dif_lim = c(-120,200) #standard for all scenarios
     tab_end_month = 12; tab_end_day = 31
     
     wide_subset_tables = list() #initialize return list
-    daily_flow_tables = list(DP_Basecase_flow, 
+    daily_flow_tables = list(DP_flows_scenarios$basecase, 
                              DP_MAR_flow, DP_ILR_flow, 
                              DP_MAR_ILR_flow,
                              #DP_Basecase_fl_flow, #DP_MAR_ILR_fl_flow,
@@ -213,7 +136,7 @@ dif_lim = c(-120,200) #standard for all scenarios
   
 
   
-  # make_flow_diff_daily_tab(basecase_flow_table = DP_Basecase_flow,
+  # make_flow_diff_daily_tab(basecase_flow_table = DP_flows_scenarios$basecase,
   #                                          daily_flow_tables = list(DP_MAR_flow, 
   #                                                                   DP_ILR_flow, 
   #                                                                   DP_MAR_ILR_flow,
@@ -346,14 +269,15 @@ read_pumping_data = function(results_dir, scenario_ids){
 ##########################             DATA PROCESSING             ##########################
 #.############################################################################################
 
-make_flow_diff_daily_tab = function(basecase_flow_table = DP_Basecase_flow,
-                                    daily_flow_tables, scenario_ids){
+make_flow_diff_daily_tab = function(basecase_flow_table = DP_flows_scenarios$basecase,
+                                    daily_flow_tables = DP_flows_scenarios[scenario_ids[-1]],
+                                    scen_ids = scenario_ids[-1]){
   Flow_Diff_Daily = data.frame(Date = seq(start_date, end_date, "days"))                          # Calculate daily difference from basecase condition
   
   for(i in 1:length(daily_flow_tables)){
     scenario_flow_table = daily_flow_tables[[i]]
-    scenario_id = scenario_ids[i]
-    if(str_to_lower(scenario_id) %in% c("mar","ilr","mar_ilr")){scenario_id = str_to_upper(scenario_id)}
+    scenario_id = scen_ids[i]
+    # if(str_to_lower(scenario_id) %in% c("mar","ilr","mar_ilr")){scenario_id = str_to_upper(scenario_id)}
     
     Flow_Diff_Daily$scen_difference_m3day = scenario_flow_table$Flow_m3day - basecase_flow_table$Flow_m3day
     Flow_Diff_Daily$scen_difference_cfs = scenario_flow_table$Flow_cfs - basecase_flow_table$Flow_cfs
@@ -364,13 +288,14 @@ make_flow_diff_daily_tab = function(basecase_flow_table = DP_Basecase_flow,
   return(Flow_Diff_Daily)
 }
 
-make_daily_flow_tab = function(daily_flow_tables, scenario_ids){
+make_daily_flow_tab = function(daily_flow_tables = DP_flows_scenarios, 
+                               scen_ids = scenario_ids){
   Daily_Flow = data.frame(Date = seq(start_date, end_date, "days"))
 
   for(i in 1:length(daily_flow_tables)){
     scenario_flow_table = daily_flow_tables[[i]]
-    scenario_id = scenario_ids[i]
-    if(str_to_lower(scenario_id) %in% c("mar","ilr","mar_ilr")){scenario_id = str_to_upper(scenario_id)}
+    scenario_id = scen_ids[i]
+    # if(str_to_lower(scenario_id) %in% c("mar","ilr","mar_ilr")){scenario_id = str_to_upper(scenario_id)}
 
     Daily_Flow$scen_difference_m3day = scenario_flow_table$Flow_m3day
     Daily_Flow$scen_difference_cfs = scenario_flow_table$Flow_cfs
@@ -386,48 +311,7 @@ return(Daily_Flow)
 # FLOW DIFFERENCES
 
 #Specify tables and scenario IDs (for column name differentiation) for daily diff table
-Flow_Diff_Daily = make_flow_diff_daily_tab(
-  basecase_flow_table = DP_Basecase_flow, 
-  daily_flow_tables = 
-    list(#DP_Basecase_drains_flow,
-         DP_MAR_flow, 
-         DP_ILR_flow, 
-         DP_MAR_ILR_flow,
-         DP_MAR_ILR_max_0.003_flow,
-         DP_MAR_ILR_max_0.019_flow,
-         DP_MAR_ILR_max_0.035_flow,
-         DP_Basecase_fl_flow, 
-         DP_MAR_ILR_fl_flow,
-         DP_0.8_flow, 
-         DP_0.9_flow,
-         DP_alf_irr_jul10_flow, 
-         DP_alf_irr_aug01_flow,
-         DP_alf_irr_aug15_flow,
-         DP_natveg_outside_adj_flow,
-         DP_natveg_gwmixed_outside_adj_flow,
-         DP_natveg_inside_adj_flow,
-         DP_natveg_gwmixed_inside_adj_flow,
-         DP_natveg_all_flow,
-         DP_natveg_gwmixed_all_flow,
-         DP_reservoir_shackleford_flow,
-         DP_reservoir_etna_flow,
-         DP_reservoir_french_flow,
-         DP_reservoir_sfork_flow
-         
-         
-    ),
-  scenario_ids = c(
-                   "mar","ilr", "mar_ilr", 
-                   "mar_ilr_max_0.003", "mar_ilr_max_0.019","mar_ilr_max_0.035",
-                   "flowlims", "mar_ilr_flowlims", 
-                   "irrig_0.8", "irrig_0.9",
-                   "alf_irr_jul10", "alf_irr_aug01", "alf_irr_aug15", 
-                   "nvoa","nvgwmoa",
-                   "nvia","nvgwmia",
-                   "nv","nvgwm",
-                   "res_shackleford", "res_etna",
-                   "res_french", "res_sfork"
-  ))
+Flow_Diff_Daily = make_flow_diff_daily_tab()
 
 # Average difference in flow for each Stress Period
 Flow_Diff_SP_Avg = Flow_Diff_Daily# Copy daily data frame
@@ -452,42 +336,8 @@ Flow_Diff_Monthly_Avg = Flow_Diff_Monthly_Avg[order(Flow_Diff_Monthly_Avg$Date),
 # DAILY FLOW
 
 Daily_Flow = make_daily_flow_tab(
-  daily_flow_tables = list(DP_Basecase_flow,
-                           DP_MAR_flow, 
-                           DP_ILR_flow, 
-                           DP_MAR_ILR_flow,        
-                           DP_MAR_ILR_max_0.003_flow,
-                           DP_MAR_ILR_max_0.019_flow,
-                           DP_MAR_ILR_max_0.035_flow,
-                           DP_Basecase_fl_flow, 
-                           DP_MAR_ILR_fl_flow,
-                           DP_0.8_flow, 
-                           DP_0.9_flow,
-                           DP_alf_irr_jul10_flow, 
-                           DP_alf_irr_aug01_flow,
-                           DP_alf_irr_aug15_flow,
-                           DP_natveg_outside_adj_flow,
-                           DP_natveg_gwmixed_outside_adj_flow,
-                           DP_natveg_inside_adj_flow,
-                           DP_natveg_gwmixed_inside_adj_flow,
-                           DP_natveg_all_flow,
-                           DP_natveg_gwmixed_all_flow,
-                           DP_reservoir_shackleford_flow,
-                           DP_reservoir_etna_flow,
-                           DP_reservoir_french_flow,
-                           DP_reservoir_sfork_flow
-  ),
-  scenario_ids = c("basecase","mar","ilr","mar_ilr",
-                   "mar_ilr_max_0.003", "mar_ilr_max_0.019","mar_ilr_max_0.035",
-                   "flowlims", "mar_ilr_flowlims", 
-                   "irrig_0.8","irrig_0.9",
-                   "alf_irr_jul10", "alf_irr_aug01","alf_irr_aug15",
-                   "nvoa", "nvgwmoa",
-                   "nvia","nvgwmia",
-                   "nv","nvgwm",
-                   "res_shackleford", "res_etna",
-                   "res_french","res_sfork"
-  ))
+  daily_flow_tables = DP_flows_scenarios,
+  scen_ids = scenario_ids)
 
 # Average flow for each Stress Period
 Flow_SP_Avg = Daily_Flow# Copy daily data frame
@@ -498,7 +348,7 @@ Flow_SP_Avg = Flow_SP_Avg[order(Flow_SP_Avg$Date),]
 
 
 # Average daily flow for each calendar month, over whole model period
-Flow_Monthly_Avg = DP_Basecase_flow[seq(-1,-92),]   # Exclude first three months when MAR is not active                                                                            
+Flow_Monthly_Avg = DP_flows_scenarios$basecase[seq(-1,-92),]   # Exclude first three months when MAR is not active                                                                            
 Flow_Monthly_Avg$Date = format(Flow_Monthly_Avg$Date, '%b')
 Flow_Monthly_Avg_2 = Flow_Monthly_Avg                                      # Copy daily data frame
 Flow_Monthly_Avg = aggregate(.~Date,data =Flow_Monthly_Avg,  FUN = mean)
@@ -512,7 +362,7 @@ Flow_Monthly_Avg = Flow_Monthly_Avg[order(Flow_Monthly_Avg$Date), ]
 
 
 
-geom_ribbon_maker = function(y_start = Flow_Diff_Monthly_Avg$MAR_ILR_difference_cfs){
+geom_ribbon_maker = function(y_start){
   x_start = 1:12
 
   #Add extrta entries where the line crosses 0
@@ -552,13 +402,12 @@ geom_ribbon_maker = function(y_start = Flow_Diff_Monthly_Avg$MAR_ILR_difference_
 # mar_ilr_ribbon_tab = geom_ribbon_maker(y_start = Flow_Diff_Monthly_Avg$MAR_ILR_difference_cfs)
 
 #Initialize ystart
-y_start = Flow_Diff_Monthly_Avg$MAR_ILR_difference_cfs
 
 geom_ribbon_list = list()
 
-for(i in 1:length(scenario_ids)){
+for(i in 2:length(scenario_ids)){
   scenario_id = scenario_ids[i]
-  if(tolower(scenario_id) %in% c("mar","ilr", "mar_ilr")){scenario_id = toupper(scenario_id)}
+  # if(tolower(scenario_id) %in% c("mar","ilr", "mar_ilr")){scenario_id = toupper(scenario_id)}
 
   scenario_colname = paste(scenario_id, "difference","cfs", sep = "_")
   
@@ -596,8 +445,8 @@ for(i in 1:length(scenario_ids)){
 
 
 flow_diff_monthly_avg_fig = function(Flow_Diff_Monthly_Avg = Flow_Diff_Monthly_Avg,
-                                     geom_ribbon_data = mar_ilr_ribbon_tab, 
-                                     scenario_colname = "MAR_ILR_difference_cfs"){
+                                     geom_ribbon_data = mar_ribbon_tab, 
+                                     scenario_colname = "mar_difference_cfs"){
   
   scenario_yvals = Flow_Diff_Monthly_Avg[,scenario_colname]
   sd_colname = paste(scenario_colname, "SD", sep = "_")
@@ -768,10 +617,10 @@ monthly_flows_DAW_fig = function(Flow_SP_Dry_Avg_Wet = Flow_SP_Dry_Avg_Wet,
 
 
 # Scenario Results - 4 panels. Figs type 1-4
-for(i in 1:length(scenario_ids)){
+for(i in 2:length(scenario_ids)){
   # i=9 # For specifics scenarios, pick which one you want
   scenario_id = scenario_ids[i]
-  if(tolower(scenario_id) %in% c("mar","ilr", "mar_ilr")){scenario_id = toupper(scenario_id)}
+  # if(tolower(scenario_id) %in% c("mar","ilr", "mar_ilr")){scenario_id = toupper(scenario_id)}
   scenario_colname_diff = paste(scenario_id, "difference","cfs", sep = "_")
   scenario_colname_flow = paste(scenario_id, "cfs", sep = "_")
   

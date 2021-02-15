@@ -39,7 +39,7 @@ reservoir_scenario = "Basecase"#"French"#"Shackleford" #"Basecase" #"Shackleford
 reservoir_plus_pipeline = FALSE    # set pipeline status
 
 # BDAs scenario
-BDAs_scenario = "Tributaries" # Can be Basecase/Tributaries/All_Streams/Scott_R_Mainstem
+BDAs_scenario = "All_Streams" # Can be Basecase/Tributaries/All_Streams/Scott_R_Mainstem
 if(tolower(BDAs_scenario) != "basecase"){ stream_bed_elev_increase = 0.5} # set average stream bed elevation increase
 
 #Land use scenario. 
@@ -70,7 +70,7 @@ landuse_scenario = "Basecase" #"major_natveg" # Default: Basecase. For attributi
 # scenario_name = "natveg_gwmixed_all"
 # scenario_name = "reservoir_french_30" # "reservoir_etna" "reservoir_sfork" "reservoir_shackleford"
 # scenario_name = "reservoir_pipeline_french"
-scenario_name = "bdas_tribs" # "bdas_all_streams" "bdas_scott_r_mainstem
+scenario_name = "bdas_all_streams" # "bdas_tribs" "bdas_scott_r"
 
 # SETUP -------------------------------------------------------------------
 
