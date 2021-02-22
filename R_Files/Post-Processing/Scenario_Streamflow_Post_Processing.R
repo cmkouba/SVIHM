@@ -23,9 +23,9 @@ library(tidyr)
 
 # Scenario ids should correspond to folder names
 scenario_ids = c("basecase",
-                 "mar","ilr","mar_ilr","mar_ilr_flowlims",
+                 "mar","ilr","mar_ilr","flowlims","mar_ilr_flowlims",
                  "mar_ilr_max_0.003","mar_ilr_max_0.019","mar_ilr_max_0.035",
-                 "irrig_0.8","irrig_0.9",
+                 "irrig_0.8","irrig_0.9", "irr_eff_improve_0.1", "irr_eff_worse_0.1",
                  "alf_irr_stop_jul10","alf_irr_stop_aug01","alf_irr_stop_aug15",
                  "natveg_outside_adj", "natveg_gwmixed_outside_adj",
                  "natveg_inside_adj","natveg_gwmixed_inside_adj",
@@ -33,8 +33,10 @@ scenario_ids = c("basecase",
                  "reservoir_shackleford", "reservoir_etna",
                  "reservoir_french", "reservoir_sfork",
                  "reservoir_pipeline_etna", "reservoir_pipeline_french",
-                 "bdas_tribs"
-                 # ,"bdas_all_streams","bdas_scott_r"
+                 "bdas_tribs","bdas_all_streams",
+                 "reservoir_etna_29kAF", 
+                 "reservoir_pipeline_etna_29kAF", 
+                 "reservoir_pipeline_etna_134kAF_60cfs"
                  )
 n_scenarios = length(scenario_ids)
 
@@ -708,6 +710,74 @@ for(i in 2:length(scenario_ids)){
 #   graphics.off()
 # 
 # }
+
+
+
+# Stream Depletion Reversal Calculation -----------------------------------
+
+m3_to_TAF = 1/4046.86*3.28084/1000 # 1acre/4046.86 m2 * 3.28084 ft/m * 1TAF / 1000 AF
+
+save_stream_dep_csv = function(Flow_Diff_Daily = Flow_Diff_Daily,
+                               start_month = 6, end_month = 12){
+  # Calculate total depletion. nprc = No Pumping Reference Case
+  nprc_colname = "natveg_gwmixed_outside_adj_difference_m3day"
+  
+  #fdd = Flow Difference Daily
+  fdd_nprc = Flow_Diff_Daily[month(Flow_Diff_Daily$Date) %in% c(start_month:end_month), nprc_colname]
+  # hist(fdd_nprc)
+  # gt0 = sum(fdd_nprc_june_dec[fdd_nprc_june_dec>0]) * m3_to_TAF
+  # lt0 = sum(fdd_nprc_june_dec[fdd_nprc_june_dec<0]) * m3_to_TAF
+  # # check for a bunch of negative depletion reversal
+  # if(lt0/gt0 > 0.05){print(paste0("Negative depletion reversal exceeds 2%: ",round(lt0/gt0*100,2),"%"))}
+  
+  total_depletion = sum(fdd_nprc) * m3_to_TAF
+  
+  scen_dep_tab = data.frame(scenario_id = scenario_ids[2:n_scenarios],
+                            neg_dep_TAF = NA,
+                            pos_dep_TAF = NA,
+                            scen_dep_TAF = NA,
+                            relative_dep = NA)
+  
+  for(i in 2:length(scenario_ids)){
+    scenario_id = scenario_ids[i]
+    
+    # Calculate scenario depletion. 
+    scen_colname = paste0(scenario_id,"_difference_m3day")
+    
+    #fdd = Flow Difference Daily
+    fdd_scen_june_dec = Flow_Diff_Daily[month(Flow_Diff_Daily$Date) %in% c(start_month:end_month),scen_colname]
+    # hist(fdd_scen_june_dec)
+    gt0 = sum(fdd_scen_june_dec[fdd_scen_june_dec>0]) * m3_to_TAF
+    lt0 = sum(fdd_scen_june_dec[fdd_scen_june_dec<0]) * m3_to_TAF
+    # check for a bunch of negative depletion reversal
+    if(abs(lt0/gt0) > 0.05)
+    {print(paste0(scenario_id,
+                  " - Negative depletion reversal exceeds 5%: ",
+                  round(lt0/gt0*100,2),"%"))
+    }
+    
+    scen_dep_tab$neg_dep_TAF[scen_dep_tab$scenario_id==scenario_id] = round(lt0,1)
+    scen_dep_tab$pos_dep_TAF[scen_dep_tab$scenario_id==scenario_id] = round(gt0,1)
+    
+    scen_depletion = round(sum(fdd_scen_june_dec) * m3_to_TAF,1)
+    
+    scen_dep_tab$scen_dep_TAF[scen_dep_tab$scenario_id==scenario_id] = scen_depletion
+  }
+  
+  scen_dep_tab$relative_dep = round(scen_dep_tab$scen_dep_TAF / total_depletion, 2)
+  
+  scen_dep_tab$rel_dep_category = "High"
+  scen_dep_tab$rel_dep_category[scen_dep_tab$relative_dep < .25] = "Low"
+  scen_dep_tab$rel_dep_category[scen_dep_tab$relative_dep >= .25 & scen_dep_tab$relative_dep < .5] = "Medium"
+  scen_dep_tab$rel_dep_category[scen_dep_tab$relative_dep >=1 ] = "Very High"
+  
+  write.csv(scen_dep_tab, paste("months",start_month,"-",end_month,"Scenario Depletion Volume.csv"), row.names = F, quote = F)
+}
+
+save_stream_dep_csv(start_month = 9, end_month = 11,  Flow_Diff_Daily = Flow_Diff_Daily)
+save_stream_dep_csv(start_month = 9, end_month = 10,  Flow_Diff_Daily = Flow_Diff_Daily)
+save_stream_dep_csv(start_month = 8, end_month = 11,  Flow_Diff_Daily = Flow_Diff_Daily)
+save_stream_dep_csv(start_month = 6, end_month = 12,  Flow_Diff_Daily = Flow_Diff_Daily)
 
 
 #.############################################################################################
