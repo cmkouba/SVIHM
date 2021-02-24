@@ -39,7 +39,7 @@
   REAL :: start, finish
   INTEGER, ALLOCATABLE, DIMENSION(:)  :: ndays
   CHARACTER(12) :: param_dummy, stream_diversion_limits
-  CHARACTER(12)  :: SFR_Template, rch_scenario, flow_scenario, landuse_scenario, suffix
+  CHARACTER(12)  :: SFR_Template, rch_scenario, flow_scenario, landuse_scenario, early_cutoff_scenario, suffix
   CHARACTER(50), ALLOCATABLE, DIMENSION(:) :: daily_out_name
   INTEGER, DIMENSION(31) :: ET_Active
   LOGICAL :: MAR_active, ILR_active, major_natveg_areas, daily_out_flag
@@ -52,7 +52,8 @@
   
   open(unit=10, file='general_inputs.txt', status='old')
   read(10, *) npoly, total_n_wells, nmonth, nrows, ncols, RD_Mult, SFR_Template
-  read(10, *) rch_scenario, flow_scenario, alf_irr_stop_mo, alf_irr_stop_day
+  read(10, *) rch_scenario, flow_scenario
+  read(10, *) alf_irr_stop_mo, alf_irr_stop_day, early_cutoff_scenario
   read(10, *) landuse_scenario
 
   if (trim(rch_scenario)=='basecase' .or. trim(rch_scenario)=='Basecase' .or. trim(rch_scenario)=='BASECASE') then            ! Set logicals for Recharge Scenario type
@@ -95,6 +96,21 @@
       call EXIT
     end if
 
+    if (trim(early_cutoff_scenario)=='allyears' .or. trim(early_cutoff_scenario)=='AllYears' &
+    .or. trim(early_cutoff_scenario)=='ALLYEARS') then 
+      early_cutoff_dry_years_only = .FALSE.         ! Set logicals for Early Cutoff Scenario type 
+    else if (trim(early_cutoff_scenario)=='dryyearsonly' .or. trim(early_cutoff_scenario)=='DryYearsOnly' &
+      .or. trim(early_cutoff_scenario)=='DRYYEARSONLY') then
+        early_cutoff_dry_years_only = .TRUE.         
+    else if (trim(early_cutoff_scenario).ne.'allyears' .or. trim(early_cutoff_scenario).ne.'AllYears' &
+      .or. trim(early_cutoff_scenario).ne.'ALLYEARS' .or. trim(early_cutoff_scenario).ne.'dryyearsonly' &
+      .or. trim(early_cutoff_scenario).ne.'DryYearsOnly' .or. trim(early_cutoff_scenario).ne.'DRYYEARSONLY') then
+        write(*,*)'Unknown alfalfa irrigation cutoff scenario input in general_inputs.txt'
+        write(*,'(2a19)')'Land use Scenario: ',trim(landuse_scenario)
+        write(800,*)'Unknown alfalfa irrigation cutoff scenario input in general_inputs.txt'
+        call EXIT
+      end if
+
     if (trim(landuse_scenario)=='basecase' .or. trim(landuse_scenario)=='Basecase' .or. trim(landuse_scenario)=='BASECASE') then 
       major_natveg_areas = .FALSE.         ! Set logicals for Landuse Scenario type 
     else if (trim(landuse_scenario)=='major_natveg' .or. trim(landuse_scenario)=='Major_NatVeg' &
@@ -119,6 +135,10 @@
   write(800,'(A19,I6)') "Alfalfa end month: ", alf_irr_stop_mo
   write(*,'(A17,I6)') "Alfalfa end day: ", alf_irr_stop_day
   write(800,'(A17,I6)') "Alfalfa end day: ", alf_irr_stop_day
+
+  write(*,'(A42,A12)') "Early alfalfa cutoff in dry years only = ", early_cutoff_scenario
+  write(800,'(A42,A12)') "Early alfalfa cutoff in dry years only = ", early_cutoff_scenario
+
   SFR_Template = TRIM(SFR_Template)
   write(*,'(A27, A6)') 'SFR Template File Format = ',SFR_Template
   write(800,'(A27, A6)') 'SFR Template File Format = ',SFR_Template
@@ -397,9 +417,9 @@
            write(800,*)'Irrigation Type Updated'
 		     end if
          if (ILR_active) then
-           call IRRIGATION_ILR(ip, imonth, jday, eff_precip, alf_irr_stop_mo, alf_irr_stop_day)
+           call IRRIGATION_ILR(ip, im, imonth, jday, eff_precip, alf_irr_stop_mo, alf_irr_stop_day, early_cutoff_dry_years_only)
 	       else
-	         call IRRIGATION(ip, imonth, jday, eff_precip, alf_irr_stop_mo, alf_irr_stop_day)
+	         call IRRIGATION(ip, im, imonth, jday, eff_precip, alf_irr_stop_mo, alf_irr_stop_day, early_cutoff_dry_years_only)
 	       end if
 	       call RECHARGE(ip,eff_precip,jday,imonth,moisture_save,MAR_active)
 		     call deficiency_check(ip, imonth, jday)       

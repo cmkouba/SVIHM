@@ -29,7 +29,8 @@ natveg_kc = 0.6 # Default: 0.6. Set at 1.0 for major natveg scenarios.
 # Month and day of the final day of alfalfa irrigation season. 
 # Default is Aug 31, 8/31
 alf_irr_stop_mo = 8 # Month as month of year (7 = July)
-alf_irr_stop_day = 31 
+alf_irr_stop_day = 01
+early_cutoff_flag = "DryYearsOnly" # default is "AllYears" ; alt is "DryYearsOnly" for 91, 92, 94, 01, 09, 13, 14 and 18
 # Convert to month of wy (Oct=1, Nov=2, ..., Jul = 10, Aug=11, Sep=0)
 if(alf_irr_stop_mo<9){alf_irr_stop_mo = alf_irr_stop_mo + 3
 }else{alf_irr_stop_mo = alf_irr_stop_mo - 9}
@@ -37,10 +38,15 @@ if(alf_irr_stop_mo<9){alf_irr_stop_mo = alf_irr_stop_mo + 3
 # Reservoir scenario
 reservoir_scenario = "Basecase"#"French"#"Shackleford" #"Basecase" #"Shackleford","French", "Etna", "South_Fork"
 reservoir_plus_pipeline = FALSE    # set pipeline status
+reservoir_capacity = "Basecase" # 59.504 * 150 * 3.2 # Basecase or,  59.504 or 119.01 (30 or 60 cfs/day in AF) * 150 (days of dry season) * n years
+reservoir_start = "empty"
 
 # BDAs scenario
-BDAs_scenario = "All_Streams" # Can be Basecase/Tributaries/All_Streams/Scott_R_Mainstem
+BDAs_scenario = "Basecase" # Can be Basecase/Tributaries/All_Streams/Scott_R_Mainstem
 if(tolower(BDAs_scenario) != "basecase"){ stream_bed_elev_increase = 0.5} # set average stream bed elevation increase
+
+# Irrigation Efficiency scenario
+irr_eff_scenario = "Basecase" # Basecase, or set irr efficiency increase or decrease amount (not applied to flood irrigation)
 
 #Land use scenario. 
 landuse_scenario = "Basecase" #"major_natveg" # Default: Basecase. For attribution study: major_natveg
@@ -62,15 +68,20 @@ landuse_scenario = "Basecase" #"major_natveg" # Default: Basecase. For attributi
 # scenario_name = "alf_irr_stop_jul10"
 # scenario_name = "alf_irr_stop_aug01"
 # scenario_name = "alf_irr_stop_aug15"
+scenario_name = "alf_irr_stop_aug01_dry_yrs_only"
 # scenario_name = "natveg_outside_adj"
 # scenario_name = "natveg_gwmixed_outside_adj"
 # scenario_name = "natveg_inside_adj"
 # scenario_name = "natveg_gwmixed_inside_adj"
 # scenario_name = "natveg_all"
 # scenario_name = "natveg_gwmixed_all"
-# scenario_name = "reservoir_french_30" # "reservoir_etna" "reservoir_sfork" "reservoir_shackleford"
-# scenario_name = "reservoir_pipeline_french"
-scenario_name = "bdas_all_streams" # "bdas_tribs" "bdas_scott_r"
+# scenario_name = "reservoir_shackleford" # "reservoir_etna" "reservoir_sfork" "reservoir_shackleford"
+# scenario_name = "reservoir_pipeline_etna"
+# scenario_name = "reservoir_etna_29KAF"
+# scenario_name = "reservoir_pipeline_etna_29KAF"
+# scenario_name = "reservoir_pipeline_etna_134kAF_60cfs"
+# scenario_name = "bdas_all_streams" # "bdas_tribs" "bdas_scott_r"
+# scenario_name = "irr_eff_worse_0.1"
 
 # SETUP -------------------------------------------------------------------
 
@@ -612,9 +623,11 @@ gen_inputs = c(
         "440  210  1.4 UCODE",
         "! num_fields, num_irr_wells, num_stress_periods, nrow, ncol, RD_Mult, UCODE/PEST", 
         sep = "  "),
-  paste(recharge_scenario, flow_scenario,     
-        alf_irr_stop_mo, alf_irr_stop_day,
-        "! Basecase/MAR/ILR/MAR_ILR, Basecase/Flow_Lims, alf_irr_stop_mo  alf_irr_stop_day",
+  paste(recharge_scenario, flow_scenario, 
+        "! Basecase/MAR/ILR/MAR_ILR, Basecase/Flow_Lims",
+        sep = "  "),
+  paste(alf_irr_stop_mo, alf_irr_stop_day, early_cutoff_flag,
+        "! alf_irr_stop_mo  alf_irr_stop_day early_cutoff_scenario",
         sep = "  "),
   paste(landuse_scenario, "! Basecase/Major_NatVeg")
   )
@@ -622,12 +635,120 @@ gen_inputs = c(
 write.table(gen_inputs, file = file.path(SWBM_file_dir, "general_inputs.txt"),
             sep = " ", quote = FALSE, col.names = FALSE, row.names = FALSE)
 
+# instream_flow_available_ratio.txt ------------------------------------------------
 
-# stress_period_days.txt --------------------------------------------------
+#read in FJ flow and CDFW recommended flow for FJ gauge
+library(dataRetrieval)
+library(lubridate)
+fj_num = "11519500"
+fjd_all = readNWISdv(siteNumbers = fj_num, parameterCd="00060" )
+fjd_all = renameNWISColumns(fjd_all)
+# Subset for model period
+fjd = fjd_all[fjd_all$Date >= model_start_date & fjd_all$Date <= model_end_date,]
 
-write.table(num_days, file = file.path(SWBM_file_dir, "stress_period_days.txt"),
-            sep = " ", quote = FALSE, col.names = FALSE, row.names = FALSE)
+cdfw_tab = read.csv(file.path(ref_data_dir,"cdfw_2017_instream_flows.csv"))
 
+#build calendar of cdfw rec flow start and end dates for the years covering the model period
+model_yrs = year(seq(from = model_start_date, to = model_end_date+365, by = "year")) #Add 365 to keep ending year in the sequence
+cdfw_start_dates = as.Date(paste(sort(rep(model_yrs, dim(cdfw_tab)[1])), 
+                                 cdfw_tab$Start.date.month, cdfw_tab$start.date.day, sep ="-"))
+cdfw_end_dates = as.Date(paste(sort(rep(model_yrs, dim(cdfw_tab)[1])), 
+                               cdfw_tab$End.date.month, cdfw_tab$End.date.day, sep ="-"))
+leap_years = seq(from=1900, to = 2100, by = 4)
+leapday_selector = day(cdfw_end_dates) == 28 & year(cdfw_end_dates) %in% leap_years
+cdfw_end_dates[leapday_selector] = 1 + cdfw_end_dates[leapday_selector] # adjust to include all of Feb
+cdfw_rec_flows = rep(cdfw_tab$Recommended.flow.cfs, length(model_yrs))
+
+# check for correctness
+# cdfw_expanded = data.frame(start_dates = cdfw_start_dates, end_dates = cdfw_end_dates,
+# cdfw_rec_flows = cdfw_rec_flows)
+
+instream_rec = data.frame(dates = model_days, cdfw_rec_flow_cfs = NA)
+
+for(i in 1:length(cdfw_start_dates)){
+  selector = instream_rec$dates >= cdfw_start_dates[i] &
+    instream_rec$dates <= cdfw_end_dates[i]
+  instream_rec$cdfw_rec_flow_cfs[selector] = cdfw_rec_flows[i]
+}
+
+# Add FJ flow to this dataframe and find difference (available flow)
+instream_rec$fj_flow_cfs = fjd$Flow[match(instream_rec$dates, fjd$Date)]
+
+# Convert to cubic meters per day
+cfs_to_m3d = 1/35.3147 * 86400 # 1 m3/x ft3 * x seconds/day
+instream_rec$cdfw_rec_flow_m3d = instream_rec$cdfw_rec_flow_cfs * cfs_to_m3d
+instream_rec$fj_flow_m3d = instream_rec$fj_flow_cfs * cfs_to_m3d
+# Calculate m3d available for expanded MAR+ILR scenario
+instream_rec$avail_m3d = instream_rec$fj_flow_m3d - instream_rec$cdfw_rec_flow_m3d
+instream_rec$avail_m3d[instream_rec$avail_m3d<0] = 0
+
+# Add the stress period and day of month 
+instream_rec$month = floor_date(instream_rec$dates, unit = "month")
+
+#calculate aggregate daily average flow, by month, for whole record
+rec_monthly = aggregate(instream_rec$cdfw_rec_flow_m3d, by = list(instream_rec$month), FUN = sum)
+fj_monthly = aggregate(instream_rec$fj_flow_m3d, by = list(instream_rec$month), FUN = sum)
+avail_monthly = merge(rec_monthly, fj_monthly, by.x = "Group.1", by.y = "Group.1")
+colnames(avail_monthly) = c("month","cdfw_rec_flow_m3","fj_flow_m3")
+avail_monthly$avail_flow_m3 = avail_monthly$fj_flow_m3 - avail_monthly$cdfw_rec_flow_m3
+avail_monthly$avail_flow_m3[avail_monthly$avail_flow_m3 <0] = 0
+avail_monthly$avail_ratio = round(avail_monthly$avail_flow_m3 / avail_monthly$fj_flow_m3,3)
+
+# plot(avail_monthly$Group.1, avail_monthly$x/fj_monthly$x, type = "l", ylab = "avail / rec ratio", ylim = c(0,1))
+# plot(avail_monthly$stress_period,avail_monthly$avail_flow_m3_month, type = "l")
+# grid()
+
+# avail_monthly$stress_period = as.numeric(as.factor(avail_monthly$stress_period)) #converts to 1 to 336 for each stress period
+
+#format for table
+avail_monthly[,colnames(avail_monthly) != "avail_ratio"] = NULL
+
+write.table(avail_monthly, file = file.path(SWBM_file_dir, "instream_flow_available_ratio.txt"),
+            sep = " ", quote = FALSE, col.names = F, row.names = FALSE)
+
+if(tolower(recharge_scenario)=="mar_ilr_max"){
+  avail_per_day = instream_rec$avail_m3d
+  # Write a daily available flow volume file
+  
+  write.table(avail_per_day, file = file.path(SWBM_file_dir, "instream_flow_available_m3d.txt"),
+              sep = " ", quote = FALSE, col.names = F, row.names = FALSE)
+  
+}
+
+
+# irr_eff.txt -------------------------------------------------------------
+
+if(tolower(irr_eff_scenario)!="basecase"){
+  filename1 = file.path(SWBM_file_dir,'irr_eff.txt')
+  
+  irr_eff_lines = readLines(filename1)
+  irr_eff_text_alfalfa = substr(irr_eff_lines[2], start = 1, stop = 6)
+  irr_eff_text_pasture = substr(irr_eff_lines[3], start = 1, stop = 9)
+  
+  irr_eff_vals_alfalfa = as.numeric(unlist(strsplit(irr_eff_text_alfalfa, split = " ")))
+  irr_eff_vals_pasture = as.numeric(unlist(strsplit(irr_eff_text_pasture, split = " ")))
+  
+  irr_eff_vals_alfalfa_amended = irr_eff_vals_alfalfa + irr_eff_scenario
+  irr_eff_vals_pasture_amended = irr_eff_vals_pasture + irr_eff_scenario
+  
+  irr_eff_vals_alfalfa_amended_text = paste(irr_eff_vals_alfalfa_amended, collapse = " ")
+  irr_eff_vals_pasture_amended_text = paste(irr_eff_vals_pasture_amended, collapse = " ")
+  
+  irr_eff_lines_amended = irr_eff_lines
+  irr_eff_lines_amended[2] = gsub(pattern = irr_eff_text_alfalfa, 
+                                  replacement = irr_eff_vals_alfalfa_amended_text, 
+                                  x = irr_eff_lines[2])
+  irr_eff_lines_amended[3] = gsub(pattern = irr_eff_text_pasture, 
+                                  replacement = irr_eff_vals_pasture_amended_text, 
+                                  x = irr_eff_lines[3])
+  if(early_cutoff_dry_years_only ==TRUE){
+    irr_eff_lines_amended[4] = early_cutoff_dry_years_only
+  }
+  
+  # overwrite the irr_eff.txt
+  writeLines(text = irr_eff_lines_amended, filename1)
+  
+}
 
 #  kc_alfalfa.txt -------------------------------------------------
 kc_alf_dormant = 0
@@ -941,6 +1062,8 @@ if(reservoir_scenario %in% c("Basecase","basecase","BASECASE")){
   D_daily = cfs_goal * cfs_to_AFday # Target demand during dry season (fish flow releases)
   # Assume demand during the dry season is about 20 cfs for ~150 days (July 1 to Dec 1)
   K = D_daily * 150 # Reservoir capacity. Rough estimate: low-flow releases for dry season.
+  
+  if(tolower(reservoir_capacity) != "basecase"){K = reservoir_capacity} # set at 5 years of capacity.
   # TO DO: check how realistic this would be (9 TAF capacity?)
   
   #Initialize inflow time series
@@ -953,12 +1076,12 @@ if(reservoir_scenario %in% c("Basecase","basecase","BASECASE")){
   P = rep_len(0, nmonth)  # Discharge from reservoir to pipeline 
   shortage = rep_len(0, nmonth)
   
-  # S[1] = K # start simulation at full
-  # R[1] = D_daily*num_days[1]  # first month meets demand
-  # met_demand = 1  # counter
-  
-  S[1] = 0 # start simulation at empty
-  R[1] = 0 # 
+  # Initialize output arrays
+  if(reservoir_start == "empty"){  S[1] = 0 }                 # start simulation at empty
+  if(reservoir_start == "full"){   S[1] = K }                 # start simulation full
+  if(is.numeric(reservoir_start) & reservoir_start <= 1){S[1] = K*reservoir_start} # Assume fraction full units
+  if(is.numeric(reservoir_start) & reservoir_start > 1){S[1] = reservoir_start}    # Assume AF units
+  R[1] = 0 
   P[1] = 0
   met_demand = 0  # counter
   
@@ -1011,39 +1134,68 @@ if(reservoir_scenario %in% c("Basecase","basecase","BASECASE")){
     shortage[t] = max(D - P[t], 0)
   }
   
-  if(reservoir_plus_pipeline == FALSE) {R = R+P} #If no pipeline, all discharge went through the stream
-  
   # Evaluate reservoir performance in terms of meeting flow release target
   dry_months = sum(1:nmonth%%12 %in% 7:11) #number of months in which we want to meet demand
   reliability = met_demand / dry_months
   
   # Plot inflow, discharge, and storage
-  plot(model_months, Q/num_days/cfs_to_AFday, type = "l", ylab = "Inflow, cfs")
-  plot(model_months, R/num_days/cfs_to_AFday, type = "l", ylab = "Stream Discharge, cfs")
-  plot(model_months, P/num_days/cfs_to_AFday, type = "l", ylab = "Pipeline Discharge, cfs")
-  plot(model_months, S, type = "l", ylab = "Storage, AF", main = paste(reservoir_scenario, cfs_goal, "cfs demand"))
+  # plot(model_months, Q/num_days/cfs_to_AFday, type = "l", ylab = "Inflow, cfs")
+  # plot(model_months, R/num_days/cfs_to_AFday, type = "l", ylab = "Stream Discharge, cfs")
+  # plot(model_months, P/num_days/cfs_to_AFday, type = "l", ylab = "Pipeline Discharge, cfs")
+  plot(model_months, S, type = "l", ylab = "Storage, AF", ylim = c(0,K), main = paste(reservoir_scenario, cfs_goal, "cfs demand, ",round(K)," AF"))
+  
+  # notes
+  #summarize by WY type, indicate on figure?
+  
   
   # #Diagnostic plots: Plot inflow, discharge, and storage for 3 years
-  # start_month = 12*12+1
+  # start_month = 22*12+1
+  # 
+  # #Inflow
   # plot(model_months[start_month + 1:36], Q[start_month+1:36]/num_days[start_month+1:36]/cfs_to_AFday, type = "o", ylab = "Inflow, cfs")
   # abline(v=model_months[as.integer(seq(from=4, by=12, length.out=28))], col = "green4", lwd = 2, lty = 2)
   # abline(v=model_months[as.integer(seq(from=7, by=12, length.out=28))], col = "orange", lwd = 2, lty = 2)
   # abline(v=model_months[as.integer(seq(from=12, by=12, length.out=28))], col = "dodgerblue", lwd = 2, lty = 2)
+  # 
+  # #R and P
   # plot(model_months[start_month+1:36], R[start_month+1:36]/num_days[start_month+1:36]/cfs_to_AFday, type = "o", ylab = "Stream Discharge, cfs")
   # lines(model_months[start_month+1:36], P[start_month+1:36]/num_days[start_month+1:36]/cfs_to_AFday, col = "brown", ylab = "Pipeline Discharge, cfs")
   # abline(v=model_months[as.integer(seq(from=4, by=12, length.out=28))], col = "green4", lwd = 2, lty = 2)
   # abline(v=model_months[as.integer(seq(from=7, by=12, length.out=28))], col = "orange", lwd = 2, lty = 2)
   # abline(v=model_months[as.integer(seq(from=12, by=12, length.out=28))], col = "dodgerblue", lwd = 2, lty = 2)
+  # abline(v=model_months[as.integer(seq(from=9, by=12, length.out=28))], col = "gray", lwd = 1, lty = 2)
+  # 
+  # #R + P.
+  # RP = P+R
+  # plot(model_months[start_month+1:36], RP[start_month+1:36]/num_days[start_month+1:36]/cfs_to_AFday, type = "o", ylab = "Stream + Pipeline Discharge, cfs")
+  # # lines(model_months[start_month+1:36], P[start_month+1:36]/num_days[start_month+1:36]/cfs_to_AFday, col = "brown", ylab = "Pipeline Discharge, cfs")
+  # abline(v=model_months[as.integer(seq(from=4, by=12, length.out=28))], col = "green4", lwd = 2, lty = 2)
+  # abline(v=model_months[as.integer(seq(from=7, by=12, length.out=28))], col = "orange", lwd = 2, lty = 2)
+  # abline(v=model_months[as.integer(seq(from=12, by=12, length.out=28))], col = "dodgerblue", lwd = 2, lty = 2)
+  # abline(v=model_months[as.integer(seq(from=9, by=12, length.out=28))], col = "gray", lwd = 1, lty = 2)
+  # # 
   # plot(model_months[start_month+1:36], P[start_month+1:36]/num_days[start_month+1:36]/cfs_to_AFday, type = "o", ylab = "Pipeline Discharge, cfs")
   # abline(v=model_months[as.integer(seq(from=4, by=12, length.out=28))], col = "green4", lwd = 2, lty = 2)
   # abline(v=model_months[as.integer(seq(from=7, by=12, length.out=28))], col = "orange", lwd = 2, lty = 2)
   # abline(v=model_months[as.integer(seq(from=12, by=12, length.out=28))], col = "dodgerblue", lwd = 2, lty = 2)
+  # 
   # plot(model_months[start_month+1:36], S[start_month+1:36], type = "l", ylab = "Storage, AF", main = paste(reservoir_scenario, cfs_goal, "cfs demand"))
   # abline(v=model_months[as.integer(seq(from=4, by=12, length.out=28))], col = "green4", lwd = 2, lty = 2)
   # abline(v=model_months[as.integer(seq(from=7, by=12, length.out=28))], col = "orange", lwd = 2, lty = 2)
   # abline(v=model_months[as.integer(seq(from=12, by=12, length.out=28))], col = "dodgerblue", lwd = 2, lty = 2)
+  # 
+  # #What's going on in September? diagnostics
+  # RP_sept = RP[seq(from=9, by = 12, length.out = 28)] # how much are we releasing in september
+  # hist(RP_sept/30/cfs_to_AFday, breaks = seq(0,250,10), xlab = "cfs R + P release", main = "September reservoir releases")
+  # P_sept = P[seq(from=9, by = 12, length.out = 28)] # how much are we releasing in september
+  # hist(P_sept/30/cfs_to_AFday, breaks = seq(0,250,10), xlab = "cfs P release", main = "September reservoir pipe releases")
+  # R_sept = R[seq(from=9, by = 12, length.out = 28)] # how much are we releasing in september
+  # hist(R_sept/30/cfs_to_AFday, breaks = seq(0,250,10), xlab = "cfs R release", main = "September reservoir releases")
+  
   
   # Revise streamflow_input.txt
+  
+  if(reservoir_plus_pipeline == FALSE) {R = R+P} #If no pipeline, all discharge went through the stream
   
   # Replace the inflow on the designated tributary with the outflow from the reservoir
   replace_this_column = grepl(pattern = reservoir_scenario, x = colnames(stm_AFday))
@@ -1071,85 +1223,12 @@ if(reservoir_scenario %in% c("Basecase","basecase","BASECASE")){
 
 
 
-#__ instream_flow_available_ratio.txt ------------------------------------------------
 
-#read in FJ flow and CDFW recommended flow for FJ gauge
-library(dataRetrieval)
-library(lubridate)
-fj_num = "11519500"
-fjd_all = readNWISdv(siteNumbers = fj_num, parameterCd="00060" )
-fjd_all = renameNWISColumns(fjd_all)
-# Subset for model period
-fjd = fjd_all[fjd_all$Date >= model_start_date & fjd_all$Date <= model_end_date,]
+# stress_period_days.txt --------------------------------------------------
 
-cdfw_tab = read.csv(file.path(ref_data_dir,"cdfw_2017_instream_flows.csv"))
+write.table(num_days, file = file.path(SWBM_file_dir, "stress_period_days.txt"),
+            sep = " ", quote = FALSE, col.names = FALSE, row.names = FALSE)
 
-#build calendar of cdfw rec flow start and end dates for the years covering the model period
-model_yrs = year(seq(from = model_start_date, to = model_end_date+365, by = "year")) #Add 365 to keep ending year in the sequence
-cdfw_start_dates = as.Date(paste(sort(rep(model_yrs, dim(cdfw_tab)[1])), 
-                            cdfw_tab$Start.date.month, cdfw_tab$start.date.day, sep ="-"))
-cdfw_end_dates = as.Date(paste(sort(rep(model_yrs, dim(cdfw_tab)[1])), 
-                            cdfw_tab$End.date.month, cdfw_tab$End.date.day, sep ="-"))
-leap_years = seq(from=1900, to = 2100, by = 4)
-leapday_selector = day(cdfw_end_dates) == 28 & year(cdfw_end_dates) %in% leap_years
-cdfw_end_dates[leapday_selector] = 1 + cdfw_end_dates[leapday_selector] # adjust to include all of Feb
-cdfw_rec_flows = rep(cdfw_tab$Recommended.flow.cfs, length(model_yrs))
-
-# check for correctness
-# cdfw_expanded = data.frame(start_dates = cdfw_start_dates, end_dates = cdfw_end_dates,
-                           # cdfw_rec_flows = cdfw_rec_flows)
-
-instream_rec = data.frame(dates = model_days, cdfw_rec_flow_cfs = NA)
-
-for(i in 1:length(cdfw_start_dates)){
-  selector = instream_rec$dates >= cdfw_start_dates[i] &
-    instream_rec$dates <= cdfw_end_dates[i]
-  instream_rec$cdfw_rec_flow_cfs[selector] = cdfw_rec_flows[i]
-}
-
-# Add FJ flow to this dataframe and find difference (available flow)
-instream_rec$fj_flow_cfs = fjd$Flow[match(instream_rec$dates, fjd$Date)]
-
-# Convert to cubic meters per day
-cfs_to_m3d = 1/35.3147 * 86400 # 1 m3/x ft3 * x seconds/day
-instream_rec$cdfw_rec_flow_m3d = instream_rec$cdfw_rec_flow_cfs * cfs_to_m3d
-instream_rec$fj_flow_m3d = instream_rec$fj_flow_cfs * cfs_to_m3d
-# Calculate m3d available for expanded MAR+ILR scenario
-instream_rec$avail_m3d = instream_rec$fj_flow_m3d - instream_rec$cdfw_rec_flow_m3d
-instream_rec$avail_m3d[instream_rec$avail_m3d<0] = 0
-
-# Add the stress period and day of month 
-instream_rec$month = floor_date(instream_rec$dates, unit = "month")
-
-#calculate aggregate daily average flow, by month, for whole record
-rec_monthly = aggregate(instream_rec$cdfw_rec_flow_m3d, by = list(instream_rec$month), FUN = sum)
-fj_monthly = aggregate(instream_rec$fj_flow_m3d, by = list(instream_rec$month), FUN = sum)
-avail_monthly = merge(rec_monthly, fj_monthly, by.x = "Group.1", by.y = "Group.1")
-colnames(avail_monthly) = c("month","cdfw_rec_flow_m3","fj_flow_m3")
-avail_monthly$avail_flow_m3 = avail_monthly$fj_flow_m3 - avail_monthly$cdfw_rec_flow_m3
-avail_monthly$avail_flow_m3[avail_monthly$avail_flow_m3 <0] = 0
-avail_monthly$avail_ratio = round(avail_monthly$avail_flow_m3 / avail_monthly$fj_flow_m3,3)
-
-# plot(avail_monthly$Group.1, avail_monthly$x/fj_monthly$x, type = "l", ylab = "avail / rec ratio", ylim = c(0,1))
-# plot(avail_monthly$stress_period,avail_monthly$avail_flow_m3_month, type = "l")
-# grid()
-
-# avail_monthly$stress_period = as.numeric(as.factor(avail_monthly$stress_period)) #converts to 1 to 336 for each stress period
-
-#format for table
-avail_monthly[,colnames(avail_monthly) != "avail_ratio"] = NULL
-
-write.table(avail_monthly, file = file.path(SWBM_file_dir, "instream_flow_available_ratio.txt"),
-            sep = " ", quote = FALSE, col.names = F, row.names = FALSE)
-
-if(tolower(recharge_scenario)=="mar_ilr_max"){
-  avail_per_day = instream_rec$avail_m3d
-  # Write a daily available flow volume file
-  
-  write.table(avail_per_day, file = file.path(SWBM_file_dir, "instream_flow_available_m3d.txt"),
-              sep = " ", quote = FALSE, col.names = F, row.names = FALSE)
-  
-}
 
 
 # SVIHM_SFR_template.txt --------------------------------------------------
@@ -1441,7 +1520,7 @@ if(reservoir_plus_pipeline == TRUE){
   file.copy(file.path(svihm_dir,"R_Files","Model",'Update_SVIHM_Drain_Inflows.R'), MF_file_dir)
   file.copy(file.path(svihm_dir,"R_Files","Model",'Update_SVIHM_Starting_Heads.R'), MF_file_dir)
   
-
+
 # OPTIONAL: copy output to Results folder for post-processing -------------
 
 # # Scenario Selection ------------------------------------------------------
@@ -1453,35 +1532,35 @@ if(reservoir_plus_pipeline == TRUE){
 # scenario_name = "mar_ilr_expanded_0.019_reservoir_french" #also makes the directory name; must match folder
 # # # 
 # # # New file architecture
-scenario_dir = file.path(svihm_dir, "Scenarios",scenario_name)
-SWBM_file_dir = scenario_dir
-MF_file_dir = scenario_dir
+# scenario_dir = file.path(svihm_dir, "Scenarios",scenario_name)
+# SWBM_file_dir = scenario_dir
+# MF_file_dir = scenario_dir
 
 # ## Directories for running the scenarios (files copied at end of script)
 # 
 # SWBM_file_dir = file.path(svihm_dir, "SWBM", scenario_name)
 # MF_file_dir = file.path(svihm_dir, "MODFLOW",scenario_name)
 
-#Copy flow tables on the mainstem
-file.copy(from = file.path(MF_file_dir,"Streamflow_FJ_SVIHM.dat"),
-          to = file.path(results_dir,paste0("Streamflow_FJ_SVIHM_",scenario_name,".dat")),
-          overwrite=T)
-file.copy(from = file.path(MF_file_dir,"Streamflow_Pred_Loc_2.dat"), 
-          to = file.path(results_dir,paste0("Streamflow_Pred_Loc_2_",scenario_name,".dat")),
-          overwrite=T)
-file.copy(from = file.path(MF_file_dir,"Streamflow_Pred_Loc_3.dat"), 
-          to = file.path(results_dir,paste0("Streamflow_Pred_Loc_3_",scenario_name,".dat")),
-          overwrite=T)
-
-file.copy(from = file.path(MF_file_dir,"SVIHM.sfr"), 
-          to = file.path(results_dir,paste0("SVIHM_",scenario_name,".sfr")),
-          overwrite=T)
-file.copy(from = file.path(SWBM_file_dir,"monthly_groundwater_by_luse.dat"), 
-          to = file.path(results_dir,paste0("monthly_groundwater_by_luse_",scenario_name,".dat")),
-          overwrite=T)
-file.copy(from = file.path(SWBM_file_dir,"monthly_deficiency_by_luse.dat"), 
-          to = file.path(results_dir,paste0("monthly_deficiency_by_luse_",scenario_name,".dat")),
-          overwrite=T)
+# #Copy flow tables on the mainstem
+# file.copy(from = file.path(MF_file_dir,"Streamflow_FJ_SVIHM.dat"),
+#           to = file.path(results_dir,paste0("Streamflow_FJ_SVIHM_",scenario_name,".dat")),
+#           overwrite=T)
+# file.copy(from = file.path(MF_file_dir,"Streamflow_Pred_Loc_2.dat"), 
+#           to = file.path(results_dir,paste0("Streamflow_Pred_Loc_2_",scenario_name,".dat")),
+#           overwrite=T)
+# file.copy(from = file.path(MF_file_dir,"Streamflow_Pred_Loc_3.dat"), 
+#           to = file.path(results_dir,paste0("Streamflow_Pred_Loc_3_",scenario_name,".dat")),
+#           overwrite=T)
+# 
+# file.copy(from = file.path(MF_file_dir,"SVIHM.sfr"), 
+#           to = file.path(results_dir,paste0("SVIHM_",scenario_name,".sfr")),
+#           overwrite=T)
+# file.copy(from = file.path(SWBM_file_dir,"monthly_groundwater_by_luse.dat"), 
+#           to = file.path(results_dir,paste0("monthly_groundwater_by_luse_",scenario_name,".dat")),
+#           overwrite=T)
+# file.copy(from = file.path(SWBM_file_dir,"monthly_deficiency_by_luse.dat"), 
+#           to = file.path(results_dir,paste0("monthly_deficiency_by_luse_",scenario_name,".dat")),
+#           overwrite=T)
 
 
 

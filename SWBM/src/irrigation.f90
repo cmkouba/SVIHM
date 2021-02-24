@@ -11,7 +11,7 @@ MODULE irrigationmodule
   DOUBLE PRECISION :: EF_SF_Ratio, Sugar_Ratio, Johnson_Ratio, Crystal_Ratio, Patterson_Ratio
   INTEGER, parameter:: nsubwn = 9
   INTEGER, parameter:: nlanduse = 5
-  LOGICAL :: irrigating
+  LOGICAL :: irrigating, early_cutoff_dry_years_only
   DOUBLE PRECISION, DIMENSION (1:32) :: SFR_Flows
   DOUBLE PRECISION, DIMENSION(nsubwn) :: streamflow_in, streamflow_out, streamflow_avail, sw_irr
   
@@ -59,15 +59,38 @@ MODULE irrigationmodule
   end subroutine read_kc_irreff
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  SUBROUTINE IRRIGATION(ip, imonth, jday, eff_precip, alf_irr_stop_mo, alf_irr_stop_day)
+  SUBROUTINE IRRIGATION(ip, im, imonth, jday, eff_precip, alf_irr_stop_mo, alf_irr_stop_day, early_cutoff_dry_years_only)
 
-  INTEGER :: imonth, jday, alf_irr_stop_mo, alf_irr_stop_day 
+  INTEGER :: im, imonth, jday, alf_irr_stop_mo, alf_irr_stop_day, alf_irr_stop_mo_for_irr_call, alf_irr_stop_day_for_irr_call
+  INTEGER, ALLOCATABLE, DIMENSION(:) :: ims_in_dry_years
+  LOGICAL :: early_cutoff_dry_years_only
   INTEGER, INTENT(in) :: ip
   DOUBLE PRECISION, INTENT(in) :: eff_precip
   REAL             :: irreff_wl, irreff_cp
    
   if (sum(poly%irr_flag).ge.250) irrigating = .true.      ! If 20% of the fields are irrigating (by number, not area; 1251 irrigated fields), set logical to true
   
+  ims_in_dry_years = (/1,  2,  3,  4,  5,  6,  7,  8,  9,  10,  11,  12, &  ! dry year 1991
+  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24, &              ! 1992
+  37,  38,  39,  40,  41,  42,  43,  44,  45,  46,  47,  48, &              ! 1994
+  121,  122,  123,  124,  125,  126,  127,  128,  129,  130,  131,  132, &  ! 2001
+  217,  218,  219,  220,  221,  222,  223,  224,  225,  226,  227,  228, &  ! 2009
+  265,  266,  267,  268,  269,  270,  271,  272,  273,  274,  275,  276, &  ! 2013
+  277,  278,  279,  280,  281,  282,  283,  284,  285,  286,  287,  288, &  ! 2014
+  325,  326,  327,  328,  329,  330,  331,  332,  333,  334,  335,  336/)   ! 2018
+
+  ! Set temporary stop month and stop day for this IRRIGATION subroutine call
+  alf_irr_stop_mo_for_irr_call = alf_irr_stop_mo
+  alf_irr_stop_day_for_irr_call = alf_irr_stop_day
+!Overwrite alfalfa irrigation stop date, if it's during a non-dry year
+  if(early_cutoff_dry_years_only .eqv. .true.) then
+    if( ANY( ims_in_dry_years==im) .eqv. .false.) then  ! If it's NOT in a dry year
+      !write(*,'(A50)') "Not In Dry Yr triggered in IRRIGATION subroutine"
+      alf_irr_stop_mo_for_irr_call = 11 ! set the cutoff date equal to the default (Aug 31, the last day of the water year)
+      alf_irr_stop_day_for_irr_call = 31
+    end if
+  end if
+
   select case (poly(ip)%landuse)
     case (25)   ! alfalfa / grain
       if(poly(ip)%rotation == 11) then                          ! Field is Alfalfa
@@ -81,23 +104,24 @@ MODULE irrigationmodule
              !write(*,*) 'alf_irr_stop_mo = ', alf_irr_stop_mo 
           !end if
         
-        if(alf_irr_stop_mo>6) then                              ! If the alfalfa irrigation season (alf_irr_stop_mo) ends in Apr-Aug (imonth 7-11))
+        if(alf_irr_stop_mo_for_irr_call>6) then                              ! If the alfalfa irrigation season (alf_irr_stop_mo) ends in Apr-Aug (imonth 7-11))
           if ((imonth==6 .and. jday.ge.25 ) .or. &                          ! If date is March 25 - March 31
-          (imonth>6 .and. imonth<alf_irr_stop_mo) .or. &                    ! If imonth is Apr-month before alf_irr_stop_mo
-          (imonth==alf_irr_stop_mo .and. jday.le.alf_irr_stop_day)) then  ! If date is in month of alf_irr_stop_mo
+          (imonth>6 .and. imonth<alf_irr_stop_mo_for_irr_call) .or. &                    ! If imonth is Apr-month before alf_irr_stop_mo
+          (imonth==alf_irr_stop_mo_for_irr_call .and. jday.le.alf_irr_stop_day_for_irr_call)) then  ! If date is in month of alf_irr_stop_mo
             if ( (daily(ip)%moisture.LT.(0.625*poly(ip)%WC8)) .or. irrigating .or.&  ! If soil moisture is < 37.5% total soil moisture storage, or if irrigating
              (imonth==8 .and. jday.ge.15) .or. (imonth>8)) then     ! or if it's after May 15th
               call IRRIGATION_RULESET(imonth, jday, ip, irreff_wl, irreff_cp, eff_precip)
              end if
             end if
           end if 
-          if (alf_irr_stop_mo<3) then          ! If the alfalfa irrigation season ends in Sep-Nov (imonth 0-2)
+          if (alf_irr_stop_mo_for_irr_call<3) then          ! If the alfalfa irrigation season ends in Sep-Nov (imonth 0-2)
             if ((imonth==6 .and. jday.ge.25 ) .or. &    ! If  March 25 - March 31
-            (imonth>6 .or. imonth<alf_irr_stop_mo) .or. & ! If month is April-Aug or if imonth is after Aug but before alf_irr_stop_mo
-            (imonth == alf_irr_stop_mo .and. jday.le.alf_irr_stop_day)) then  ! If date is in last month of irrigation season but before ending day
+            (imonth>6 .or. imonth<alf_irr_stop_mo_for_irr_call) .or. & ! If month is April-Aug or if imonth is after Aug but before alf_irr_stop_mo
+            (imonth == alf_irr_stop_mo_for_irr_call .and. jday.le.alf_irr_stop_day_for_irr_call)) then  ! If date is in last month of irrigation season but before ending day
               if ( (daily(ip)%moisture.LT.(0.625*poly(ip)%WC8)) .or. irrigating .or. & ! If soil moisture is < 37.5% total soil moisture storage,
               (imonth==8 .and. jday.ge.15) .or. imonth>8 .or. &
-              (imonth<alf_irr_stop_mo .or. (imonth==alf_irr_stop_mo.and. jday.le.alf_irr_stop_day))) then     ! or if it's after May 15th but before alf irr stop date
+              (imonth<alf_irr_stop_mo_for_irr_call .or. (imonth==alf_irr_stop_mo_for_irr_call &
+              .and. jday.le.alf_irr_stop_day_for_irr_call))) then     ! or if it's after May 15th but before alf irr stop date
                 call IRRIGATION_RULESET(imonth, jday, ip, irreff_wl, irreff_cp, eff_precip)
               end if
             end if
@@ -323,12 +347,13 @@ MODULE irrigationmodule
   END SUBROUTINE MAR
 
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-  SUBROUTINE IRRIGATION_ILR(ip, imonth, jday, eff_precip, alf_irr_stop_mo, alf_irr_stop_day)
+  SUBROUTINE IRRIGATION_ILR(ip, im, imonth, jday, eff_precip, alf_irr_stop_mo, alf_irr_stop_day, early_cutoff_dry_years_only)
 
-  INTEGER                      :: imonth, jday, alf_irr_stop_mo, alf_irr_stop_day
+  INTEGER                      :: im, imonth, jday, alf_irr_stop_mo, alf_irr_stop_day
   INTEGER, INTENT(in)          :: ip
   DOUBLE PRECISION, INTENT(in) :: eff_precip
   REAL                         :: irreff_wl, irreff_cp
+  LOGICAL                      :: early_cutoff_dry_years_only
   
   if (sum(poly%irr_flag).ge.250) irrigating = .true.      ! If 20% of the fields are irrigating (by number, not area; 1251 irrigated fields), set logical to true
   if (sum(sw_irr) .LT. sum(streamflow_avail) .and. poly(ip)%ILR_Flag == 1) then

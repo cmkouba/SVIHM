@@ -449,6 +449,9 @@ mwb_asjul10 = monthly_water_budget_alf_stop_jul10
 monthly_water_budget_alf_stop_aug01 = read.table(file.path(swbm_scenario_dir,"alf_irr_stop_aug01","monthly_water_budget.dat"), header = TRUE)
 mwb_asaug01 = monthly_water_budget_alf_stop_aug01
 
+monthly_water_budget_alf_stop_aug01_dry = read.table(file.path(swbm_scenario_dir,"alf_irr_stop_aug01_dry_yrs_only","monthly_water_budget.dat"), header = TRUE)
+mwb_asaug01_dry = monthly_water_budget_alf_stop_aug01_dry
+
 monthly_water_budget_alf_stop_aug15 = read.table(file.path(swbm_scenario_dir,"alf_irr_stop_aug15","monthly_water_budget.dat"), header = TRUE)
 mwb_asaug15 = monthly_water_budget_alf_stop_aug15
 
@@ -535,6 +538,7 @@ plot_water_budget_overview(mwb_i0.9, "90 percent Irrigation Demand", output_type
 
 plot_water_budget_overview(mwb_asjul10, "Alfalfa Irrigation ends Jul 10", output_type = "png")
 plot_water_budget_overview(mwb_asaug01, "Alfalfa Irrigation ends Aug 01", output_type = "png")
+plot_water_budget_overview(mwb_asaug01_dry, "Alfalfa Irrigation ends Aug 01, dry yrs", output_type = "png")
 plot_water_budget_overview(mwb_nvoa, "Native Veg Outside Adj", output_type = "png")
 
 

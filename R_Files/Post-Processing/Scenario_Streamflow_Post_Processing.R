@@ -27,6 +27,7 @@ scenario_ids = c("basecase",
                  "mar_ilr_max_0.003","mar_ilr_max_0.019","mar_ilr_max_0.035",
                  "irrig_0.8","irrig_0.9", "irr_eff_improve_0.1", "irr_eff_worse_0.1",
                  "alf_irr_stop_jul10","alf_irr_stop_aug01","alf_irr_stop_aug15",
+                 "alf_irr_stop_aug01_dry_yrs_only",
                  "natveg_outside_adj", "natveg_gwmixed_outside_adj",
                  "natveg_inside_adj","natveg_gwmixed_inside_adj",
                  "natveg_all","natveg_gwmixed_all",
@@ -620,7 +621,7 @@ monthly_flows_DAW_fig = function(Flow_SP_Dry_Avg_Wet = Flow_SP_Dry_Avg_Wet,
 
 # Scenario Results - 4 panels. Figs type 1-4
 for(i in 2:length(scenario_ids)){
-  # i=9 # For specifics scenarios, pick which one you want
+  # i=17 # For specifics scenarios, pick which one you want
   scenario_id = scenario_ids[i]
   # if(tolower(scenario_id) %in% c("mar","ilr", "mar_ilr")){scenario_id = toupper(scenario_id)}
   scenario_colname_diff = paste(scenario_id, "difference","cfs", sep = "_")
