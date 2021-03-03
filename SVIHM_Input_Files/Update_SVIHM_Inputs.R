@@ -29,8 +29,8 @@ natveg_kc = 0.6 # Default: 0.6. Set at 1.0 for major natveg scenarios.
 # Month and day of the final day of alfalfa irrigation season. 
 # Default is Aug 31, 8/31
 alf_irr_stop_mo = 8 # Month as month of year (7 = July)
-alf_irr_stop_day = 01
-early_cutoff_flag = "DryYearsOnly" # default is "AllYears" ; alt is "DryYearsOnly" for 91, 92, 94, 01, 09, 13, 14 and 18
+alf_irr_stop_day = 31
+early_cutoff_flag = "AllYears" # default is "AllYears" ; alt is "DryYearsOnly" for 91, 92, 94, 01, 09, 13, 14 and 18
 # Convert to month of wy (Oct=1, Nov=2, ..., Jul = 10, Aug=11, Sep=0)
 if(alf_irr_stop_mo<9){alf_irr_stop_mo = alf_irr_stop_mo + 3
 }else{alf_irr_stop_mo = alf_irr_stop_mo - 9}
@@ -38,8 +38,9 @@ if(alf_irr_stop_mo<9){alf_irr_stop_mo = alf_irr_stop_mo + 3
 # Reservoir scenario
 reservoir_scenario = "Basecase"#"French"#"Shackleford" #"Basecase" #"Shackleford","French", "Etna", "South_Fork"
 reservoir_plus_pipeline = FALSE    # set pipeline status
-reservoir_capacity = "Basecase" # 59.504 * 150 * 3.2 # Basecase or,  59.504 or 119.01 (30 or 60 cfs/day in AF) * 150 (days of dry season) * n years
-reservoir_start = "empty"
+reservoir_capacity =  "Basecase" #119.01 * 150 * 7.5 # Basecase or,  59.504 or 119.01 (30 or 60 cfs/day in AF) * 150 (days of dry season) * n years
+reservoir_start = "empty" # "empty" "full" or a fraction of capacity, or a number of AF
+dry_season_release_cfs = 30 # typically 30 or 60 cfs
 
 # BDAs scenario
 BDAs_scenario = "Basecase" # Can be Basecase/Tributaries/All_Streams/Scott_R_Mainstem
@@ -49,7 +50,7 @@ if(tolower(BDAs_scenario) != "basecase"){ stream_bed_elev_increase = 0.5} # set 
 irr_eff_scenario = "Basecase" # Basecase, or set irr efficiency increase or decrease amount (not applied to flood irrigation)
 
 #Land use scenario. 
-landuse_scenario = "Basecase" #"major_natveg" # Default: Basecase. For attribution study: major_natveg
+landuse_scenario ="major_natveg" # Default: Basecase. For attribution study: major_natveg
 # landuse_scenario_detail = "native veg, gw and mixed fields, outside adj"
 # landuse_scenario_detail = "native veg outside adj"
 # landuse_scenario_detail = "native veg, gw and mixed fields, inside adj"
@@ -60,15 +61,16 @@ landuse_scenario = "Basecase" #"major_natveg" # Default: Basecase. For attributi
 
 
 # Overall scenario identifier. Also makes the directory name; must match folder
-# scenario_name = "basecase"
+scenario_name = "basecase"
 # scenario_name = "mar_ilr" # "ilr" "mar"
 # scenario_name = "mar_ilr_max_0.019" # Options: 0.035, 0.003, or 0.019 (the arithmetic mean) or 0.01 (the geometric mean)
 # scenario_name = "mar_ilr_flowlims"#"flowlims"
 # scenario_name = "irrig_0.8"#"irrig_0.9" #
 # scenario_name = "alf_irr_stop_jul10"
 # scenario_name = "alf_irr_stop_aug01"
+# scenario_name = "alf_irr_stop_aug01_dry_yrs_only"
 # scenario_name = "alf_irr_stop_aug15"
-scenario_name = "alf_irr_stop_aug01_dry_yrs_only"
+# scenario_name = "alf_irr_stop_aug15_dry_yrs_only"
 # scenario_name = "natveg_outside_adj"
 # scenario_name = "natveg_gwmixed_outside_adj"
 # scenario_name = "natveg_inside_adj"
@@ -78,10 +80,11 @@ scenario_name = "alf_irr_stop_aug01_dry_yrs_only"
 # scenario_name = "reservoir_shackleford" # "reservoir_etna" "reservoir_sfork" "reservoir_shackleford"
 # scenario_name = "reservoir_pipeline_etna"
 # scenario_name = "reservoir_etna_29KAF"
+ # scenario_name = "reservoir_etna_134kAF_60cfs"
 # scenario_name = "reservoir_pipeline_etna_29KAF"
 # scenario_name = "reservoir_pipeline_etna_134kAF_60cfs"
 # scenario_name = "bdas_all_streams" # "bdas_tribs" "bdas_scott_r"
-# scenario_name = "irr_eff_worse_0.1"
+# scenario_name = "irr_eff_improve_0.2"
 
 # SETUP -------------------------------------------------------------------
 
@@ -741,10 +744,7 @@ if(tolower(irr_eff_scenario)!="basecase"){
   irr_eff_lines_amended[3] = gsub(pattern = irr_eff_text_pasture, 
                                   replacement = irr_eff_vals_pasture_amended_text, 
                                   x = irr_eff_lines[3])
-  if(early_cutoff_dry_years_only ==TRUE){
-    irr_eff_lines_amended[4] = early_cutoff_dry_years_only
-  }
-  
+
   # overwrite the irr_eff.txt
   writeLines(text = irr_eff_lines_amended, filename1)
   
@@ -1058,7 +1058,7 @@ if(reservoir_scenario %in% c("Basecase","basecase","BASECASE")){
   
   #Reservoir parameters 
   cfs_to_AFday = 2.29568411*10^-5 * 86400
-  cfs_goal = 30
+  cfs_goal = dry_season_release_cfs
   D_daily = cfs_goal * cfs_to_AFday # Target demand during dry season (fish flow releases)
   # Assume demand during the dry season is about 20 cfs for ~150 days (July 1 to Dec 1)
   K = D_daily * 150 # Reservoir capacity. Rough estimate: low-flow releases for dry season.
@@ -1077,8 +1077,8 @@ if(reservoir_scenario %in% c("Basecase","basecase","BASECASE")){
   shortage = rep_len(0, nmonth)
   
   # Initialize output arrays
-  if(reservoir_start == "empty"){  S[1] = 0 }                 # start simulation at empty
-  if(reservoir_start == "full"){   S[1] = K }                 # start simulation full
+  if(tolower(reservoir_start) == "empty"){  S[1] = 0 }                 # start simulation at empty
+  if(tolower(reservoir_start) == "full"){   S[1] = K }                 # start simulation full
   if(is.numeric(reservoir_start) & reservoir_start <= 1){S[1] = K*reservoir_start} # Assume fraction full units
   if(is.numeric(reservoir_start) & reservoir_start > 1){S[1] = reservoir_start}    # Assume AF units
   R[1] = 0 

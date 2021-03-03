@@ -1,5 +1,6 @@
 # Script for post-processing changes to streamflow resulting from implementing different conjunctive use scenarios
-rm(list=ls())
+
+# rm(list=ls())
 
 library(ggplot2)
 library(lubridate)
@@ -9,9 +10,9 @@ library(dplyr)
 library(grid)
 library(stringr)
 library(tidyr)
-#############################################################################################
+#. ############################################################################################
 ############################              USER INPUT             ############################
-#############################################################################################
+#. ############################################################################################
 
 # scenario_ids = c("Basecase","MAR")
 # scenario_ids = c("Basecase","ILR")
@@ -22,23 +23,28 @@ library(tidyr)
 # scenario_ids = c("Basecase","alf_ir_stop_jul10")
 
 # Scenario ids should correspond to folder names
-scenario_ids = c("basecase",
-                 "mar","ilr","mar_ilr","flowlims","mar_ilr_flowlims",
-                 "mar_ilr_max_0.003","mar_ilr_max_0.019","mar_ilr_max_0.035",
-                 "irrig_0.8","irrig_0.9", "irr_eff_improve_0.1", "irr_eff_worse_0.1",
-                 "alf_irr_stop_jul10","alf_irr_stop_aug01","alf_irr_stop_aug15",
-                 "alf_irr_stop_aug01_dry_yrs_only",
-                 "natveg_outside_adj", "natveg_gwmixed_outside_adj",
-                 "natveg_inside_adj","natveg_gwmixed_inside_adj",
-                 "natveg_all","natveg_gwmixed_all",
-                 "reservoir_shackleford", "reservoir_etna",
-                 "reservoir_french", "reservoir_sfork",
-                 "reservoir_pipeline_etna", "reservoir_pipeline_french",
-                 "bdas_tribs","bdas_all_streams",
-                 "reservoir_etna_29kAF", 
-                 "reservoir_pipeline_etna_29kAF", 
-                 "reservoir_pipeline_etna_134kAF_60cfs"
-                 )
+if(!exists("scenario_ids")){
+  scenario_ids = c("basecase",
+                   "mar","ilr","mar_ilr","flowlims","mar_ilr_flowlims",
+                   "mar_ilr_max_0.003","mar_ilr_max_0.019","mar_ilr_max_0.035",
+                   "irrig_0.8","irrig_0.9",
+                    "irr_eff_improve_0.1", "irr_eff_improve_0.2", "irr_eff_worse_0.1",
+                   "alf_irr_stop_jul10",
+                   "alf_irr_stop_aug01","alf_irr_stop_aug01_dry_yrs_only", 
+                   "alf_irr_stop_aug15","alf_irr_stop_aug15_dry_yrs_only",
+                   "natveg_outside_adj", "natveg_gwmixed_outside_adj",
+                   "natveg_inside_adj","natveg_gwmixed_inside_adj",
+                   "natveg_all","natveg_gwmixed_all",
+                   "reservoir_shackleford", "reservoir_etna",
+                   "reservoir_french", "reservoir_sfork",
+                   "reservoir_pipeline_etna", "reservoir_pipeline_french",
+                   "bdas_tribs","bdas_all_streams",
+                   "reservoir_etna_29kAF",
+                   "reservoir_etna_134kAF_60cfs",
+                    "reservoir_pipeline_etna_29kAF",
+                   "reservoir_pipeline_etna_134kAF_60cfs"
+  )
+}
 n_scenarios = length(scenario_ids)
 
 # COMPARE_MAR = TRUE
@@ -51,8 +57,8 @@ graphics_type = 'png'    #output type for graphics, currently pdf or png
 # flow_loc = 'Streamflow_Pred_Loc_2'; flow_loc_short = "PL2"
 # flow_loc = 'Streamflow_Pred_Loc_3'; flow_loc_short = "PL3"
 
-results_dir = "C:/Users/Claire/Documents/GitHub/SVIHM/R_Files/Post-Processing/Results"
-setwd(results_dir)
+# results_dir = "C:/Users/Claire/Documents/GitHub/SVIHM/R_Files/Post-Processing/Results"
+# setwd(results_dir)
 scenario_dir = "C:/Users/Claire/Documents/GitHub/SVIHM/Scenarios"
 start_date = as.Date("1990-10-01")
 end_date = as.Date("2018-09-30")
@@ -60,7 +66,7 @@ start_wy = 1991
 end_wy = 2018
 num_stress_periods = length(seq(start_date, end_date, by="month")); nsp = num_stress_periods
 
-dif_lim = c(-120,200) #standard for all scenarios
+dif_lim = c(-80,200) #standard for all scenarios
 # dif_lim = c(-40, 80)
 #.############################################################################################
 ############################             IMPORT DATA             ############################
@@ -72,7 +78,7 @@ DP_flows_scenarios = list()
 for(i in 1:length(scenario_ids)){
   scenario_id = scenario_ids[i]
   scenario_filename = file.path(scenario_dir, scenario_id,paste0(flow_loc,".dat"))
-  print(scenario_filename)
+  # print(scenario_filename)
   DP_flow_scenario = data.frame(Date = seq(start_date, end_date, "days"), 
                                 Flow_m3day = read.table(scenario_filename, skip = 2)[,3],
                                 Flow_cfs = read.table(scenario_filename, skip = 2)[,3]*0.000408734569)
@@ -407,6 +413,7 @@ geom_ribbon_maker = function(y_start){
 #Initialize ystart
 
 geom_ribbon_list = list()
+# print(scenario_ids)
 
 for(i in 2:length(scenario_ids)){
   scenario_id = scenario_ids[i]
@@ -433,10 +440,9 @@ for(i in 2:length(scenario_ids)){
 # 
 
 #.############################################################################################
-#.############################################################################################
 ############################                PLOTS                ############################
 #.############################################################################################
-#.############################################################################################
+
 
 #.############################################################################################
 ####################        Universal plotter scripts       ####################
@@ -602,6 +608,7 @@ monthly_flows_DAW_fig = function(Flow_SP_Dry_Avg_Wet = Flow_SP_Dry_Avg_Wet,
                        trans="log10", breaks = 10^seq(0,4,by = 1),) +
     annotation_logticks(sides = "l")+
     scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
+    
     theme(#panel.background = element_blank(),
       panel.border = element_rect(fill=NA, color = 'black'),
       axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
@@ -620,42 +627,46 @@ monthly_flows_DAW_fig = function(Flow_SP_Dry_Avg_Wet = Flow_SP_Dry_Avg_Wet,
 
 
 # Scenario Results - 4 panels. Figs type 1-4
-for(i in 2:length(scenario_ids)){
-  # i=17 # For specifics scenarios, pick which one you want
-  scenario_id = scenario_ids[i]
-  # if(tolower(scenario_id) %in% c("mar","ilr", "mar_ilr")){scenario_id = toupper(scenario_id)}
-  scenario_colname_diff = paste(scenario_id, "difference","cfs", sep = "_")
-  scenario_colname_flow = paste(scenario_id, "cfs", sep = "_")
-  
-  fdmaf = flow_diff_monthly_avg_fig(Flow_Diff_Monthly_Avg = Flow_Diff_Monthly_Avg,
-                                    geom_ribbon_data = geom_ribbon_list[[i]],
-                                    scenario_colname = scenario_colname_diff)
-  fddawf = flow_diff_DAW_fig(Flow_Diff_SP_Dry_Avg_Wet = Flow_Diff_SP_Dry_Avg_Wet,
-                             scenario_colname = scenario_colname_diff)
-  mfdawf = monthly_flows_DAW_fig(Flow_SP_Dry_Avg_Wet = Flow_SP_Dry_Avg_Wet,
-                                 scenario_colname = scenario_colname_flow)
-  
-  fig_name = paste(scenario_id, "scenario results_4 panels.png")
-  
-  png(fig_name, width = 7, height = 6, units = "in", res = 300)
-  grid.newpage()
-  pushViewport(viewport(layout = grid.layout(2,2)))
-  vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-  print(fdmaf +
-          ylab('Average Streamflow Difference (cfs)'),
-        vp = vplayout(1,1))
-  print(fddawf +
-          ylab(''),
-        vp = vplayout(1,2))
-  print(Basecase_Monthly_Avg_Flow_Plot +
-          ylab('Monthly Average Streamflow (cfs)'),
-        vp = vplayout(2,1))
-  print(mfdawf +
-          ylab(''),
-        vp = vplayout(2,2))
-  graphics.off()
-  
+make_all_plots = FALSE
+if(make_all_plots == TRUE){
+  for(i in 2:length(scenario_ids)){
+    # i=17 # For specifics scenarios, pick which one you want
+    scenario_id = scenario_ids[i]
+    # if(tolower(scenario_id) %in% c("mar","ilr", "mar_ilr")){scenario_id = toupper(scenario_id)}
+    scenario_colname_diff = paste(scenario_id, "difference","cfs", sep = "_")
+    scenario_colname_flow = paste(scenario_id, "cfs", sep = "_")
+    
+    fdmaf = flow_diff_monthly_avg_fig(Flow_Diff_Monthly_Avg = Flow_Diff_Monthly_Avg,
+                                      geom_ribbon_data = geom_ribbon_list[[i]],
+                                      scenario_colname = scenario_colname_diff)
+    fddawf = flow_diff_DAW_fig(Flow_Diff_SP_Dry_Avg_Wet = Flow_Diff_SP_Dry_Avg_Wet,
+                               scenario_colname = scenario_colname_diff)
+    mfdawf = monthly_flows_DAW_fig(Flow_SP_Dry_Avg_Wet = Flow_SP_Dry_Avg_Wet,
+                                   scenario_colname = scenario_colname_flow)
+    
+    fig_name = paste(scenario_id, "scenario results_4 panels.png")
+    
+    png(fig_name, width = 7, height = 6, units = "in", res = 300)
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(2,2)))
+    vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+    print(fdmaf +
+            ylab('Average Streamflow Difference (cfs)'),
+          vp = vplayout(1,1))
+    print(fddawf +
+            ylab(''),
+          vp = vplayout(1,2))
+    print(Basecase_Monthly_Avg_Flow_Plot +
+            ylab('Monthly Average Streamflow (cfs)'),
+          vp = vplayout(2,1))
+    print(mfdawf +
+            ylab(''),
+          vp = vplayout(2,2))
+    graphics.off()
+  }
 }
+
+
 
 # Scenario results - panels, flow diffs. Figs Type 1 and 2.
 # for(i in 1:length(scenario_ids)){
@@ -711,6 +722,7 @@ for(i in 2:length(scenario_ids)){
 #   graphics.off()
 # 
 # }
+
 
 
 
@@ -775,305 +787,309 @@ save_stream_dep_csv = function(Flow_Diff_Daily = Flow_Diff_Daily,
   write.csv(scen_dep_tab, paste("months",start_month,"-",end_month,"Scenario Depletion Volume.csv"), row.names = F, quote = F)
 }
 
-save_stream_dep_csv(start_month = 9, end_month = 11,  Flow_Diff_Daily = Flow_Diff_Daily)
-save_stream_dep_csv(start_month = 9, end_month = 10,  Flow_Diff_Daily = Flow_Diff_Daily)
-save_stream_dep_csv(start_month = 8, end_month = 11,  Flow_Diff_Daily = Flow_Diff_Daily)
-save_stream_dep_csv(start_month = 6, end_month = 12,  Flow_Diff_Daily = Flow_Diff_Daily)
+write_these_tables = F
+if(write_these_tables == TRUE){
+  save_stream_dep_csv(start_month = 9, end_month = 11,  Flow_Diff_Daily = Flow_Diff_Daily)
+  save_stream_dep_csv(start_month = 9, end_month = 10,  Flow_Diff_Daily = Flow_Diff_Daily)
+  save_stream_dep_csv(start_month = 8, end_month = 11,  Flow_Diff_Daily = Flow_Diff_Daily)
+  save_stream_dep_csv(start_month = 6, end_month = 12,  Flow_Diff_Daily = Flow_Diff_Daily)
+  
+}
 
 
-#.############################################################################################
-####################        STRESS PERIOD AVERAGE DIFFERENCE PLOTS       ####################
-#.############################################################################################
-(MAR_Monthly_Diff_Plot = ggplot(Flow_Diff_SP_Avg, aes(x = Date, y = MAR_difference_cfs)) +
-    geom_hline(yintercept = 0) +
-    geom_line() +
-    geom_point() +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 10), 
-                       expand = c(0,0)) +
-   scale_x_date(limits = c(start_date,
-                           end_date),
-                breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
-                date_labels = ('%b-%y')) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8))
-)
-(ILR_Monthly_Diff_Plot = ggplot(Flow_Diff_SP_Avg, aes(x = Date, y = ILR_difference_cfs)) +
-    geom_hline(yintercept = 0) +
-    geom_line() +
-    geom_point() +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 10), expand = c(0,0)) +
-    scale_x_date(limits = c(start_date,
-                            end_date),
-                 breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
-                 date_labels = ('%b-%y')) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8))
-)
-(MAR_ILR_Monthly_Diff_Plot = ggplot(Flow_Diff_SP_Avg, aes(x = Date, y = MAR_ILR_difference_cfs)) +
-    geom_hline(yintercept = 0) +
-    geom_line() +
-    geom_point() +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 10), expand = c(0,0)) +
-    scale_x_date(limits = c(start_date,
-                            end_date),
-                 breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
-                 date_labels = ('%b-%y')) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8))
-)
-
-(Flowlim_Monthly_Diff_Plot = ggplot(Flow_Diff_SP_Avg, 
-                                    aes(x = Date, y = flowlims_difference_cfs)) +
-    geom_hline(yintercept = 0) +
-    geom_line() +
-    geom_point() +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 10), expand = c(0,0)) +
-    scale_x_date(limits = c(start_date,
-                            end_date),
-                 breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
-                 date_labels = ('%b-%y')) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8))
-)
-
-(MAR_ILR_Flowlim_Monthly_Diff_Plot = ggplot(Flow_Diff_SP_Avg, 
-                                    aes(x = Date, y = mar_ilr_flowlims_difference_cfs)) +
-    geom_hline(yintercept = 0) +
-    geom_line() +
-    geom_point() +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 10), expand = c(0,0)) +
-    scale_x_date(limits = c(start_date,
-                            end_date),
-                 breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
-                 date_labels = ('%b-%y')) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8))
-)
-#.############################################################################################
-####################           AVERAGE MONTHLY DIFFERENCE PLOTS          ####################
-#.############################################################################################
-(MAR_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
-    geom_ribbon(data = MAR_geom_ribbon_data[1:4,], aes(x = x,ymin = y, ymax = 0), fill = 'red', alpha=  0.5) +
-    geom_ribbon(data = MAR_geom_ribbon_data[4:13,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) + 
-    geom_hline(yintercept = 0) +
-    geom_line(aes(x = seq(1,12), y = MAR_difference_cfs, group = 1)) +
-    geom_errorbar(aes(x = seq(1,12), ymin = MAR_difference_cfs-MAR_difference_cfs_SD, 
-                      ymax = MAR_difference_cfs+MAR_difference_cfs_SD, group = 1), width = 0.25) +
-    geom_point(aes(x = seq(1,12), y = MAR_difference_cfs, group = 1),size = 1.5) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8))
-)
-(ILR_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
-    geom_ribbon(data = ILR_geom_ribbon_data[1:4,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) +
-    geom_ribbon(data = ILR_geom_ribbon_data[4:8,], aes(x = x,ymin = y, ymax = 0), fill = 'red', alpha=  0.5) +
-    geom_ribbon(data = ILR_geom_ribbon_data[8:14,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) +
-    geom_hline(yintercept = 0) +
-    geom_line(aes(x = seq(1,12), y = ILR_difference_cfs, group = 1)) +
-    geom_errorbar(aes(x = seq(1,12), ymin = ILR_difference_cfs-ILR_difference_cfs_SD, 
-                      ymax = ILR_difference_cfs+ILR_difference_cfs_SD, group = 1), width = 0.25) +
-    geom_point(aes(x = seq(1,12), y = ILR_difference_cfs, group = 1),size = 1.5) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8))
-)
-(MAR_ILR_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
-    geom_ribbon(data = MAR_ILR_geom_ribbon_data[1:4,], aes(x = x,ymin = 0, ymax = y), fill = 'red', alpha=  0.5) +
-    geom_ribbon(data = MAR_ILR_geom_ribbon_data[4:6,], aes(x = x,ymin = y, ymax = 0), fill = 'dodgerblue', alpha=  0.5) +
-    geom_ribbon(data = MAR_ILR_geom_ribbon_data[6:9,], aes(x = x,ymin = 0, ymax = y), fill = 'red', alpha=  0.5) +
-    geom_ribbon(data = MAR_ILR_geom_ribbon_data[9:15,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) +
-    geom_hline(yintercept = 0) +
-    geom_line(aes(x = seq(1,12), y = MAR_ILR_difference_cfs, group = 1)) +
-    geom_point(aes(x = seq(1,12), y = MAR_ILR_difference_cfs, group = 1),size = 1.5) +
-    geom_errorbar(aes(x = seq(1,12), ymin = MAR_ILR_difference_cfs-MAR_ILR_difference_cfs_SD, 
-                      ymax = MAR_ILR_difference_cfs+MAR_ILR_difference_cfs_SD, group = 1), width = 0.25) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8))
-)
-
-(Flowlims_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
-    geom_ribbon(data = flowlims_geom_ribbon_data[1:12,], aes(x = x,ymin = y, ymax = 0), fill = 'dodgerblue', alpha=  0.5) +
-    geom_hline(yintercept = 0) +
-    geom_line(aes(x = seq(1,12), y = flowlims_difference_cfs, group = 1)) +
-    geom_point(aes(x = seq(1,12), y = flowlims_difference_cfs, group = 1),size = 1.5) +
-    geom_errorbar(aes(x = seq(1,12), ymin = flowlims_difference_cfs-flowlims_difference_cfs_SD, 
-                      ymax = flowlims_difference_cfs+flowlims_difference_cfs_SD, group = 1), width = 0.25) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8))
-)
-
-(MAR_ILR_Flowlims_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
-    geom_ribbon(data = MAR_ILR_Flowlims_geom_ribbon_data[1:4,], aes(x = x,ymin = 0, ymax = y), fill = 'red', alpha=  0.5) +
-    geom_ribbon(data = MAR_ILR_Flowlims_geom_ribbon_data[4:6,], aes(x = x,ymin = y, ymax = 0), fill = 'dodgerblue', alpha=  0.5) +
-    geom_ribbon(data = MAR_ILR_Flowlims_geom_ribbon_data[6:8,], aes(x = x,ymin = 0, ymax = y), fill = 'red', alpha=  0.5) +
-    geom_ribbon(data = MAR_ILR_Flowlims_geom_ribbon_data[8:15,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) +
-    geom_hline(yintercept = 0) +
-    geom_line(aes(x = seq(1,12), y = mar_ilr_flowlims_difference_cfs, group = 1)) +
-    geom_point(aes(x = seq(1,12), y = mar_ilr_flowlims_difference_cfs, group = 1),size = 1.5) +
-    geom_errorbar(aes(x = seq(1,12), ymin = mar_ilr_flowlims_difference_cfs-mar_ilr_flowlims_difference_cfs_SD, 
-                      ymax = mar_ilr_flowlims_difference_cfs+mar_ilr_flowlims_difference_cfs_SD, group = 1), width = 0.25) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8))
-)
-(Irrig_0.8_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
-    geom_ribbon(data = irrig_0.8_geom_ribbon_data[1:12,], aes(x = x,ymin = y, ymax = 0), fill = 'dodgerblue', alpha=  0.5) +
-    geom_hline(yintercept = 0) +
-    geom_line(aes(x = seq(1,12), y = irrig_0.8_difference_cfs, group = 1)) +
-    geom_point(aes(x = seq(1,12), y = irrig_0.8_difference_cfs, group = 1),size = 1.5) +
-    geom_errorbar(aes(x = seq(1,12), ymin = irrig_0.8_difference_cfs-irrig_0.8_difference_cfs_SD, 
-                      ymax = irrig_0.8_difference_cfs+irrig_0.8_difference_cfs_SD, group = 1), width = 0.25) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8))
-)
-(Irrig_0.9_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
-    geom_ribbon(data = irrig_0.9_geom_ribbon_data[1:12,], aes(x = x,ymin = y, ymax = 0), fill = 'dodgerblue', alpha=  0.5) +
-    geom_hline(yintercept = 0) +
-    geom_line(aes(x = seq(1,12), y = irrig_0.9_difference_cfs, group = 1)) +
-    geom_point(aes(x = seq(1,12), y = irrig_0.9_difference_cfs, group = 1),size = 1.5) +
-    geom_errorbar(aes(x = seq(1,12), ymin = irrig_0.9_difference_cfs-irrig_0.9_difference_cfs_SD, 
-                      ymax = irrig_0.9_difference_cfs+irrig_0.9_difference_cfs_SD, group = 1), width = 0.25) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8))
-)
-
-
-nvoa_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
-    geom_ribbon(data = nvoa_geom_ribbon_data[1:4,], aes(x = x,ymin = y, ymax = 0), fill = 'red', alpha=  0.5) +
-    geom_ribbon(data = nvoa_geom_ribbon_data[4:13,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) + 
-    geom_hline(yintercept = 0) +
-    geom_line(aes(x = seq(1,12), y = nvoa_difference_cfs, group = 1)) +
-    geom_point(aes(x = seq(1,12), y = nvoa_difference_cfs, group = 1),size = 1.5) +
-    geom_errorbar(aes(x = seq(1,12), ymin = nvoa_difference_cfs-nvoa_difference_cfs_SD, 
-                      ymax = nvoa_difference_cfs+nvoa_difference_cfs_SD, group = 1), width = 0.25) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8))
-
-
-nvgwmoa_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
-    geom_ribbon(data = nvgwmoa_geom_ribbon_data[1:2,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) + 
-    geom_ribbon(data = nvgwmoa_geom_ribbon_data[2:4,], aes(x = x,ymin = y, ymax = 0), fill = 'red', alpha=  0.5) +
-    geom_ribbon(data = nvgwmoa_geom_ribbon_data[4:14,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) +
-    geom_hline(yintercept = 0) +
-    geom_line(aes(x = seq(1,12), y = nvgwmoa_difference_cfs, group = 1)) +
-    geom_point(aes(x = seq(1,12), y = nvgwmoa_difference_cfs, group = 1),size = 1.5) +
-    geom_errorbar(aes(x = seq(1,12), ymin = nvgwmoa_difference_cfs-nvgwmoa_difference_cfs_SD, 
-                      ymax = nvgwmoa_difference_cfs+nvgwmoa_difference_cfs_SD, group = 1), width = 0.25) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8))
+# #.############################################################################################
+# ####################        STRESS PERIOD AVERAGE DIFFERENCE PLOTS       ####################
+# #.############################################################################################
+# (MAR_Monthly_Diff_Plot = ggplot(Flow_Diff_SP_Avg, aes(x = Date, y = MAR_difference_cfs)) +
+#     geom_hline(yintercept = 0) +
+#     geom_line() +
+#     geom_point() +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 10), 
+#                        expand = c(0,0)) +
+#    scale_x_date(limits = c(start_date,
+#                            end_date),
+#                 breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
+#                 date_labels = ('%b-%y')) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8))
+# )
+# (ILR_Monthly_Diff_Plot = ggplot(Flow_Diff_SP_Avg, aes(x = Date, y = ILR_difference_cfs)) +
+#     geom_hline(yintercept = 0) +
+#     geom_line() +
+#     geom_point() +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 10), expand = c(0,0)) +
+#     scale_x_date(limits = c(start_date,
+#                             end_date),
+#                  breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
+#                  date_labels = ('%b-%y')) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8))
+# )
+# (MAR_ILR_Monthly_Diff_Plot = ggplot(Flow_Diff_SP_Avg, aes(x = Date, y = MAR_ILR_difference_cfs)) +
+#     geom_hline(yintercept = 0) +
+#     geom_line() +
+#     geom_point() +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 10), expand = c(0,0)) +
+#     scale_x_date(limits = c(start_date,
+#                             end_date),
+#                  breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
+#                  date_labels = ('%b-%y')) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8))
+# )
+# 
+# (Flowlim_Monthly_Diff_Plot = ggplot(Flow_Diff_SP_Avg, 
+#                                     aes(x = Date, y = flowlims_difference_cfs)) +
+#     geom_hline(yintercept = 0) +
+#     geom_line() +
+#     geom_point() +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 10), expand = c(0,0)) +
+#     scale_x_date(limits = c(start_date,
+#                             end_date),
+#                  breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
+#                  date_labels = ('%b-%y')) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8))
+# )
+# 
+# (MAR_ILR_Flowlim_Monthly_Diff_Plot = ggplot(Flow_Diff_SP_Avg, 
+#                                     aes(x = Date, y = mar_ilr_flowlims_difference_cfs)) +
+#     geom_hline(yintercept = 0) +
+#     geom_line() +
+#     geom_point() +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 10), expand = c(0,0)) +
+#     scale_x_date(limits = c(start_date,
+#                             end_date),
+#                  breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
+#                  date_labels = ('%b-%y')) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8))
+# )
+# #.############################################################################################
+# ####################           AVERAGE MONTHLY DIFFERENCE PLOTS          ####################
+# #.############################################################################################
+# (MAR_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
+#     geom_ribbon(data = MAR_geom_ribbon_data[1:4,], aes(x = x,ymin = y, ymax = 0), fill = 'red', alpha=  0.5) +
+#     geom_ribbon(data = MAR_geom_ribbon_data[4:13,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) + 
+#     geom_hline(yintercept = 0) +
+#     geom_line(aes(x = seq(1,12), y = MAR_difference_cfs, group = 1)) +
+#     geom_errorbar(aes(x = seq(1,12), ymin = MAR_difference_cfs-MAR_difference_cfs_SD, 
+#                       ymax = MAR_difference_cfs+MAR_difference_cfs_SD, group = 1), width = 0.25) +
+#     geom_point(aes(x = seq(1,12), y = MAR_difference_cfs, group = 1),size = 1.5) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8))
+# )
+# (ILR_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
+#     geom_ribbon(data = ILR_geom_ribbon_data[1:4,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) +
+#     geom_ribbon(data = ILR_geom_ribbon_data[4:8,], aes(x = x,ymin = y, ymax = 0), fill = 'red', alpha=  0.5) +
+#     geom_ribbon(data = ILR_geom_ribbon_data[8:14,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) +
+#     geom_hline(yintercept = 0) +
+#     geom_line(aes(x = seq(1,12), y = ILR_difference_cfs, group = 1)) +
+#     geom_errorbar(aes(x = seq(1,12), ymin = ILR_difference_cfs-ILR_difference_cfs_SD, 
+#                       ymax = ILR_difference_cfs+ILR_difference_cfs_SD, group = 1), width = 0.25) +
+#     geom_point(aes(x = seq(1,12), y = ILR_difference_cfs, group = 1),size = 1.5) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8))
+# )
+# (MAR_ILR_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
+#     geom_ribbon(data = MAR_ILR_geom_ribbon_data[1:4,], aes(x = x,ymin = 0, ymax = y), fill = 'red', alpha=  0.5) +
+#     geom_ribbon(data = MAR_ILR_geom_ribbon_data[4:6,], aes(x = x,ymin = y, ymax = 0), fill = 'dodgerblue', alpha=  0.5) +
+#     geom_ribbon(data = MAR_ILR_geom_ribbon_data[6:9,], aes(x = x,ymin = 0, ymax = y), fill = 'red', alpha=  0.5) +
+#     geom_ribbon(data = MAR_ILR_geom_ribbon_data[9:15,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) +
+#     geom_hline(yintercept = 0) +
+#     geom_line(aes(x = seq(1,12), y = MAR_ILR_difference_cfs, group = 1)) +
+#     geom_point(aes(x = seq(1,12), y = MAR_ILR_difference_cfs, group = 1),size = 1.5) +
+#     geom_errorbar(aes(x = seq(1,12), ymin = MAR_ILR_difference_cfs-MAR_ILR_difference_cfs_SD, 
+#                       ymax = MAR_ILR_difference_cfs+MAR_ILR_difference_cfs_SD, group = 1), width = 0.25) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8))
+# )
+# 
+# (Flowlims_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
+#     geom_ribbon(data = flowlims_geom_ribbon_data[1:12,], aes(x = x,ymin = y, ymax = 0), fill = 'dodgerblue', alpha=  0.5) +
+#     geom_hline(yintercept = 0) +
+#     geom_line(aes(x = seq(1,12), y = flowlims_difference_cfs, group = 1)) +
+#     geom_point(aes(x = seq(1,12), y = flowlims_difference_cfs, group = 1),size = 1.5) +
+#     geom_errorbar(aes(x = seq(1,12), ymin = flowlims_difference_cfs-flowlims_difference_cfs_SD, 
+#                       ymax = flowlims_difference_cfs+flowlims_difference_cfs_SD, group = 1), width = 0.25) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8))
+# )
+# 
+# (MAR_ILR_Flowlims_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
+#     geom_ribbon(data = MAR_ILR_Flowlims_geom_ribbon_data[1:4,], aes(x = x,ymin = 0, ymax = y), fill = 'red', alpha=  0.5) +
+#     geom_ribbon(data = MAR_ILR_Flowlims_geom_ribbon_data[4:6,], aes(x = x,ymin = y, ymax = 0), fill = 'dodgerblue', alpha=  0.5) +
+#     geom_ribbon(data = MAR_ILR_Flowlims_geom_ribbon_data[6:8,], aes(x = x,ymin = 0, ymax = y), fill = 'red', alpha=  0.5) +
+#     geom_ribbon(data = MAR_ILR_Flowlims_geom_ribbon_data[8:15,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) +
+#     geom_hline(yintercept = 0) +
+#     geom_line(aes(x = seq(1,12), y = mar_ilr_flowlims_difference_cfs, group = 1)) +
+#     geom_point(aes(x = seq(1,12), y = mar_ilr_flowlims_difference_cfs, group = 1),size = 1.5) +
+#     geom_errorbar(aes(x = seq(1,12), ymin = mar_ilr_flowlims_difference_cfs-mar_ilr_flowlims_difference_cfs_SD, 
+#                       ymax = mar_ilr_flowlims_difference_cfs+mar_ilr_flowlims_difference_cfs_SD, group = 1), width = 0.25) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8))
+# )
+# (Irrig_0.8_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
+#     geom_ribbon(data = irrig_0.8_geom_ribbon_data[1:12,], aes(x = x,ymin = y, ymax = 0), fill = 'dodgerblue', alpha=  0.5) +
+#     geom_hline(yintercept = 0) +
+#     geom_line(aes(x = seq(1,12), y = irrig_0.8_difference_cfs, group = 1)) +
+#     geom_point(aes(x = seq(1,12), y = irrig_0.8_difference_cfs, group = 1),size = 1.5) +
+#     geom_errorbar(aes(x = seq(1,12), ymin = irrig_0.8_difference_cfs-irrig_0.8_difference_cfs_SD, 
+#                       ymax = irrig_0.8_difference_cfs+irrig_0.8_difference_cfs_SD, group = 1), width = 0.25) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8))
+# )
+# (Irrig_0.9_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
+#     geom_ribbon(data = irrig_0.9_geom_ribbon_data[1:12,], aes(x = x,ymin = y, ymax = 0), fill = 'dodgerblue', alpha=  0.5) +
+#     geom_hline(yintercept = 0) +
+#     geom_line(aes(x = seq(1,12), y = irrig_0.9_difference_cfs, group = 1)) +
+#     geom_point(aes(x = seq(1,12), y = irrig_0.9_difference_cfs, group = 1),size = 1.5) +
+#     geom_errorbar(aes(x = seq(1,12), ymin = irrig_0.9_difference_cfs-irrig_0.9_difference_cfs_SD, 
+#                       ymax = irrig_0.9_difference_cfs+irrig_0.9_difference_cfs_SD, group = 1), width = 0.25) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8))
+# )
+# 
+# 
+# nvoa_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
+#     geom_ribbon(data = nvoa_geom_ribbon_data[1:4,], aes(x = x,ymin = y, ymax = 0), fill = 'red', alpha=  0.5) +
+#     geom_ribbon(data = nvoa_geom_ribbon_data[4:13,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) + 
+#     geom_hline(yintercept = 0) +
+#     geom_line(aes(x = seq(1,12), y = nvoa_difference_cfs, group = 1)) +
+#     geom_point(aes(x = seq(1,12), y = nvoa_difference_cfs, group = 1),size = 1.5) +
+#     geom_errorbar(aes(x = seq(1,12), ymin = nvoa_difference_cfs-nvoa_difference_cfs_SD, 
+#                       ymax = nvoa_difference_cfs+nvoa_difference_cfs_SD, group = 1), width = 0.25) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8))
+# 
+# 
+# nvgwmoa_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
+#     geom_ribbon(data = nvgwmoa_geom_ribbon_data[1:2,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) + 
+#     geom_ribbon(data = nvgwmoa_geom_ribbon_data[2:4,], aes(x = x,ymin = y, ymax = 0), fill = 'red', alpha=  0.5) +
+#     geom_ribbon(data = nvgwmoa_geom_ribbon_data[4:14,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) +
+#     geom_hline(yintercept = 0) +
+#     geom_line(aes(x = seq(1,12), y = nvgwmoa_difference_cfs, group = 1)) +
+#     geom_point(aes(x = seq(1,12), y = nvgwmoa_difference_cfs, group = 1),size = 1.5) +
+#     geom_errorbar(aes(x = seq(1,12), ymin = nvgwmoa_difference_cfs-nvgwmoa_difference_cfs_SD, 
+#                       ymax = nvgwmoa_difference_cfs+nvgwmoa_difference_cfs_SD, group = 1), width = 0.25) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8))
 
 # nvoa_1.0_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) + 
 #   geom_ribbon(data = nvoa_1.0_geom_ribbon_data[1:4,], aes(x = x,ymin = y, ymax = 0), fill = 'red', alpha=  0.5) +
@@ -1116,254 +1132,254 @@ nvgwmoa_Monthly_Avg_Plot = ggplot(data = Flow_Diff_Monthly_Avg) +
 #         axis.title.y = element_text(size = 8))
 
 
-#.############################################################################################
-###############           DAILY FLOW MONTHLY AVERAGES PLOTS         ###############
-#.############################################################################################
-
-# Process so that the error bars show up
-Flow_Monthly_Avg$Flow_cfs_SD_down = Flow_Monthly_Avg$Flow_cfs_SD
-sd_bigger_than_avg = Flow_Monthly_Avg$Flow_cfs_SD_down>Flow_Monthly_Avg$Flow_cfs
-Flow_Monthly_Avg$Flow_cfs_SD_down[sd_bigger_than_avg] = Flow_Monthly_Avg$Flow_cfs[sd_bigger_than_avg] -1
-
-(Monthly_Avg_Flow_Plot = ggplot(data = Flow_Monthly_Avg) + 
-   # geom_ribbon(data = nvgwmoa_geom_ribbon_data[1:2,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) + 
-   # geom_ribbon(data = nvgwmoa_geom_ribbon_data[2:4,], aes(x = x,ymin = y, ymax = 0), fill = 'red', alpha=  0.5) +
-   # geom_ribbon(data = nvgwmoa_geom_ribbon_data[4:14,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) +
-   geom_hline(yintercept = 0) +
-   geom_line(aes(x = seq(1,12), y = Flow_cfs, group = 1)) +
-   geom_point(aes(x = seq(1,12), y = Flow_cfs, group = 1),size = 1.5) +
-   geom_errorbar(aes(x = seq(1,12), ymin = Flow_cfs-Flow_cfs_SD_down, 
-                     ymax = Flow_cfs+Flow_cfs_SD, group = 1), width = 0.25) +
-   scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
-   scale_y_continuous(limits = c(1,2000), 
-                      trans="log10", breaks = 10^seq(0,4,by = 1),) +
-    annotation_logticks(sides = "l")+
-   theme(#panel.background = element_blank(),
-         panel.border = element_rect(fill=NA, color = 'black'),
-         axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-         axis.text.y = element_text(size = 8),
-         axis.ticks = element_line(size = 0.2),
-         plot.title = element_text(hjust = 0.5, size = 10),
-         axis.title.x = element_blank(),
-         axis.title.y = element_text(size = 8))
-)
-
-#.############################################################################################
-###############           DRY, AVERAGE, AND WET YEAR DIFFERENCE PLOTS         ###############
-#.############################################################################################
-Flow_Diff_SP_Dry_Avg_Wet = subset(Flow_Diff_SP_Avg,#select = c('Date','MAR_difference_cfs', 'ILR_difference_cfs', 'MAR_ILR_difference_cfs'), 
-                                  Date %in%c(seq(as.Date("2010/1/1"), by = "month", length.out = 12),
-                                             seq(as.Date("2014/1/1"), by = "month", length.out = 12),
-                                             seq(as.Date("2017/1/1"), by = "month", length.out = 12)))
-Flow_Diff_SP_Dry_Avg_Wet$Year_Type = rep(c('Average (2010)','Dry (2014)','Wet (2017)'), each=12)
-Flow_Diff_SP_Dry_Avg_Wet$Year_Type = factor(Flow_Diff_SP_Dry_Avg_Wet$Year_Type, levels = c('Dry (2014)','Average (2010)','Wet (2017)'))
-Flow_Diff_SP_Dry_Avg_Wet = Flow_Diff_SP_Dry_Avg_Wet[order(Flow_Diff_SP_Dry_Avg_Wet$Year_Type),]
-Flow_Diff_SP_Dry_Avg_Wet$Date = format(Flow_Diff_SP_Dry_Avg_Wet$Date, '%m')
-
-(MAR_Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = MAR_difference_cfs, group = Year_Type, color = Year_Type)) +
-   geom_hline(yintercept = 0) +
-   geom_line(size = 1) +
-   geom_point(size = 1.5) +
-   scale_y_continuous(limits = dif_lim, 
-                      breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-   scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
-   scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
-   theme(panel.background = element_blank(),
-         panel.border = element_rect(fill=NA, color = 'black'),
-         axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-         axis.text.y = element_text(size = 8),
-         axis.ticks = element_line(size = 0.2),
-         plot.title = element_text(hjust = 0.5, size = 10),
-         axis.title.x = element_blank(),
-         axis.title.y = element_text(size = 8),
-         legend.key = element_blank(),
-         legend.title = element_blank(),
-         legend.position = c(0.80,0.15),
-         legend.background = element_blank())
-)
-(ILR_Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = ILR_difference_cfs, group = Year_Type, color = Year_Type)) +
-    geom_hline(yintercept = 0) +
-    geom_line(size = 1) +
-    geom_point(size = 1.5) +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
-    scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8),
-          legend.key = element_blank(),
-          legend.title = element_blank(),
-          legend.position = c(0.80,0.15),
-          legend.background = element_blank())
-)
-(MAR_ILR_Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = MAR_ILR_difference_cfs, group = Year_Type, color = Year_Type)) +
-    geom_hline(yintercept = 0) +
-    geom_line(size = 1) +
-    geom_point(size = 1.5) +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
-    scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8),
-          legend.key = element_blank(),
-          legend.title = element_blank(),
-          legend.position = c(0.80,0.15),
-          legend.background = element_blank())
-)
-
-(Flowlims_Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = flowlims_difference_cfs, group = Year_Type, color = Year_Type)) +
-    geom_hline(yintercept = 0) +
-    geom_line(size = 1) +
-    geom_point(size = 1.5) +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
-    scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8),
-          legend.key = element_blank(),
-          legend.title = element_blank(),
-          legend.position = c(0.80,0.15),
-          legend.background = element_blank())
-)
-
-(MAR_ILR_Flowlims_Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = mar_ilr_flowlims_difference_cfs, group = Year_Type, color = Year_Type)) +
-    geom_hline(yintercept = 0) +
-    geom_line(size = 1) +
-    geom_point(size = 1.5) +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
-    scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8),
-          legend.key = element_blank(),
-          legend.title = element_blank(),
-          legend.position = c(0.80,0.15),
-          legend.background = element_blank())
-)
-
-(Irrig_0.8_Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = irrig_0.8_difference_cfs, group = Year_Type, color = Year_Type)) +
-    geom_hline(yintercept = 0) +
-    geom_line(size = 1) +
-    geom_point(size = 1.5) +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
-    scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8),
-          legend.key = element_blank(),
-          legend.title = element_blank(),
-          legend.position = c(0.80,0.15),
-          legend.background = element_blank())
-)
-
-(Irrig_0.9_Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, 
-                                          aes(x = as.numeric(Date), 
-                                              y = irrig_0.9_difference_cfs, 
-                                              group = Year_Type, color = Year_Type)) +
-    geom_hline(yintercept = 0) +
-    geom_line(size = 1) +
-    geom_point(size = 1.5) +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
-    scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8),
-          legend.key = element_blank(),
-          legend.title = element_blank(),
-          legend.position = c(0.80,0.15),
-          legend.background = element_blank())
-)
-
-(nvoa_Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, 
-                                          aes(x = as.numeric(Date), 
-                                              y = nvoa_difference_cfs, 
-                                              group = Year_Type, color = Year_Type)) +
-    geom_hline(yintercept = 0) +
-    geom_line(size = 1) +
-    geom_point(size = 1.5) +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
-    scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8),
-          legend.key = element_blank(),
-          legend.title = element_blank(),
-          legend.position = c(0.80,0.15),
-          legend.background = element_blank())
-)
-
-(nvgwmoa_Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, 
-                                         aes(x = as.numeric(Date), 
-                                             y = nvgwmoa_difference_cfs, 
-                                             group = Year_Type, color = Year_Type)) +
-    geom_hline(yintercept = 0) +
-    geom_line(size = 1) +
-    geom_point(size = 1.5) +
-    scale_y_continuous(limits = dif_lim, 
-                       breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
-    scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8),
-          legend.key = element_blank(),
-          legend.title = element_blank(),
-          legend.position = c(0.80,0.15),
-          legend.background = element_blank())
-)
+# #.############################################################################################
+# ###############           DAILY FLOW MONTHLY AVERAGES PLOTS         ###############
+# #.############################################################################################
+# 
+# # Process so that the error bars show up
+# Flow_Monthly_Avg$Flow_cfs_SD_down = Flow_Monthly_Avg$Flow_cfs_SD
+# sd_bigger_than_avg = Flow_Monthly_Avg$Flow_cfs_SD_down>Flow_Monthly_Avg$Flow_cfs
+# Flow_Monthly_Avg$Flow_cfs_SD_down[sd_bigger_than_avg] = Flow_Monthly_Avg$Flow_cfs[sd_bigger_than_avg] -1
+# 
+# (Monthly_Avg_Flow_Plot = ggplot(data = Flow_Monthly_Avg) + 
+#    # geom_ribbon(data = nvgwmoa_geom_ribbon_data[1:2,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) + 
+#    # geom_ribbon(data = nvgwmoa_geom_ribbon_data[2:4,], aes(x = x,ymin = y, ymax = 0), fill = 'red', alpha=  0.5) +
+#    # geom_ribbon(data = nvgwmoa_geom_ribbon_data[4:14,], aes(x = x,ymin = 0, ymax = y), fill = 'dodgerblue', alpha=  0.5) +
+#    geom_hline(yintercept = 0) +
+#    geom_line(aes(x = seq(1,12), y = Flow_cfs, group = 1)) +
+#    geom_point(aes(x = seq(1,12), y = Flow_cfs, group = 1),size = 1.5) +
+#    geom_errorbar(aes(x = seq(1,12), ymin = Flow_cfs-Flow_cfs_SD_down, 
+#                      ymax = Flow_cfs+Flow_cfs_SD, group = 1), width = 0.25) +
+#    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = Flow_Diff_Monthly_Avg$Date) +
+#    scale_y_continuous(limits = c(1,2000), 
+#                       trans="log10", breaks = 10^seq(0,4,by = 1),) +
+#     annotation_logticks(sides = "l")+
+#    theme(#panel.background = element_blank(),
+#          panel.border = element_rect(fill=NA, color = 'black'),
+#          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#          axis.text.y = element_text(size = 8),
+#          axis.ticks = element_line(size = 0.2),
+#          plot.title = element_text(hjust = 0.5, size = 10),
+#          axis.title.x = element_blank(),
+#          axis.title.y = element_text(size = 8))
+# )
+# 
+# #.############################################################################################
+# ###############           DRY, AVERAGE, AND WET YEAR DIFFERENCE PLOTS         ###############
+# #.############################################################################################
+# Flow_Diff_SP_Dry_Avg_Wet = subset(Flow_Diff_SP_Avg,#select = c('Date','MAR_difference_cfs', 'ILR_difference_cfs', 'MAR_ILR_difference_cfs'), 
+#                                   Date %in%c(seq(as.Date("2010/1/1"), by = "month", length.out = 12),
+#                                              seq(as.Date("2014/1/1"), by = "month", length.out = 12),
+#                                              seq(as.Date("2017/1/1"), by = "month", length.out = 12)))
+# Flow_Diff_SP_Dry_Avg_Wet$Year_Type = rep(c('Average (2010)','Dry (2014)','Wet (2017)'), each=12)
+# Flow_Diff_SP_Dry_Avg_Wet$Year_Type = factor(Flow_Diff_SP_Dry_Avg_Wet$Year_Type, levels = c('Dry (2014)','Average (2010)','Wet (2017)'))
+# Flow_Diff_SP_Dry_Avg_Wet = Flow_Diff_SP_Dry_Avg_Wet[order(Flow_Diff_SP_Dry_Avg_Wet$Year_Type),]
+# Flow_Diff_SP_Dry_Avg_Wet$Date = format(Flow_Diff_SP_Dry_Avg_Wet$Date, '%m')
+# 
+# (MAR_Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = MAR_difference_cfs, group = Year_Type, color = Year_Type)) +
+#    geom_hline(yintercept = 0) +
+#    geom_line(size = 1) +
+#    geom_point(size = 1.5) +
+#    scale_y_continuous(limits = dif_lim, 
+#                       breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
+#    scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
+#    theme(panel.background = element_blank(),
+#          panel.border = element_rect(fill=NA, color = 'black'),
+#          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#          axis.text.y = element_text(size = 8),
+#          axis.ticks = element_line(size = 0.2),
+#          plot.title = element_text(hjust = 0.5, size = 10),
+#          axis.title.x = element_blank(),
+#          axis.title.y = element_text(size = 8),
+#          legend.key = element_blank(),
+#          legend.title = element_blank(),
+#          legend.position = c(0.80,0.15),
+#          legend.background = element_blank())
+# )
+# (ILR_Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = ILR_difference_cfs, group = Year_Type, color = Year_Type)) +
+#     geom_hline(yintercept = 0) +
+#     geom_line(size = 1) +
+#     geom_point(size = 1.5) +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
+#     scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8),
+#           legend.key = element_blank(),
+#           legend.title = element_blank(),
+#           legend.position = c(0.80,0.15),
+#           legend.background = element_blank())
+# )
+# (MAR_ILR_Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = MAR_ILR_difference_cfs, group = Year_Type, color = Year_Type)) +
+#     geom_hline(yintercept = 0) +
+#     geom_line(size = 1) +
+#     geom_point(size = 1.5) +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
+#     scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8),
+#           legend.key = element_blank(),
+#           legend.title = element_blank(),
+#           legend.position = c(0.80,0.15),
+#           legend.background = element_blank())
+# )
+# 
+# (Flowlims_Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = flowlims_difference_cfs, group = Year_Type, color = Year_Type)) +
+#     geom_hline(yintercept = 0) +
+#     geom_line(size = 1) +
+#     geom_point(size = 1.5) +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
+#     scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8),
+#           legend.key = element_blank(),
+#           legend.title = element_blank(),
+#           legend.position = c(0.80,0.15),
+#           legend.background = element_blank())
+# )
+# 
+# (MAR_ILR_Flowlims_Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = mar_ilr_flowlims_difference_cfs, group = Year_Type, color = Year_Type)) +
+#     geom_hline(yintercept = 0) +
+#     geom_line(size = 1) +
+#     geom_point(size = 1.5) +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
+#     scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8),
+#           legend.key = element_blank(),
+#           legend.title = element_blank(),
+#           legend.position = c(0.80,0.15),
+#           legend.background = element_blank())
+# )
+# 
+# (Irrig_0.8_Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = irrig_0.8_difference_cfs, group = Year_Type, color = Year_Type)) +
+#     geom_hline(yintercept = 0) +
+#     geom_line(size = 1) +
+#     geom_point(size = 1.5) +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
+#     scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8),
+#           legend.key = element_blank(),
+#           legend.title = element_blank(),
+#           legend.position = c(0.80,0.15),
+#           legend.background = element_blank())
+# )
+# 
+# (Irrig_0.9_Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, 
+#                                           aes(x = as.numeric(Date), 
+#                                               y = irrig_0.9_difference_cfs, 
+#                                               group = Year_Type, color = Year_Type)) +
+#     geom_hline(yintercept = 0) +
+#     geom_line(size = 1) +
+#     geom_point(size = 1.5) +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
+#     scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8),
+#           legend.key = element_blank(),
+#           legend.title = element_blank(),
+#           legend.position = c(0.80,0.15),
+#           legend.background = element_blank())
+# )
+# 
+# (nvoa_Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, 
+#                                           aes(x = as.numeric(Date), 
+#                                               y = nvoa_difference_cfs, 
+#                                               group = Year_Type, color = Year_Type)) +
+#     geom_hline(yintercept = 0) +
+#     geom_line(size = 1) +
+#     geom_point(size = 1.5) +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
+#     scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8),
+#           legend.key = element_blank(),
+#           legend.title = element_blank(),
+#           legend.position = c(0.80,0.15),
+#           legend.background = element_blank())
+# )
+# 
+# (nvgwmoa_Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, 
+#                                          aes(x = as.numeric(Date), 
+#                                              y = nvgwmoa_difference_cfs, 
+#                                              group = Year_Type, color = Year_Type)) +
+#     geom_hline(yintercept = 0) +
+#     geom_line(size = 1) +
+#     geom_point(size = 1.5) +
+#     scale_y_continuous(limits = dif_lim, 
+#                        breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
+#     scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8),
+#           legend.key = element_blank(),
+#           legend.title = element_blank(),
+#           legend.position = c(0.80,0.15),
+#           legend.background = element_blank())
+# )
 
 # (nvoa_1.0_Dry_Avg_Wet_Diff_Plot = ggplot(data = Flow_Diff_SP_Dry_Avg_Wet, 
 #                                             aes(x = as.numeric(Date), 
@@ -1416,218 +1432,216 @@ Flow_Diff_SP_Dry_Avg_Wet$Date = format(Flow_Diff_SP_Dry_Avg_Wet$Date, '%m')
 # )
 
 
-#.############################################################################################
-###############           DRY, AVERAGE, AND WET YEAR FLOW PLOTS         ###############
-#.############################################################################################
-
-#.############################################################################################
-
-Flow_SP_Dry_Avg_Wet = subset(Flow_SP_Avg,
-                             #select = c('Date','MAR_difference_cfs', 'ILR_difference_cfs', 'MAR_ILR_difference_cfs'), 
-                             Date %in%c(seq(as.Date("2010/1/1"), by = "month", length.out = 12),
-                                        seq(as.Date("2014/1/1"), by = "month", length.out = 12),
-                                        seq(as.Date("2017/1/1"), by = "month", length.out = 12)))
-Flow_SP_Dry_Avg_Wet$Year_Type = rep(c('Average (2010)','Dry (2014)','Wet (2017)'), each=12)
-Flow_SP_Dry_Avg_Wet$Year_Type = factor(Flow_SP_Dry_Avg_Wet$Year_Type, levels = c('Dry (2014)','Average (2010)','Wet (2017)'))
-Flow_SP_Dry_Avg_Wet = Flow_SP_Dry_Avg_Wet[order(Flow_SP_Dry_Avg_Wet$Year_Type),]
-Flow_SP_Dry_Avg_Wet$Date = format(Flow_SP_Dry_Avg_Wet$Date, '%m')
-
-(basecase_Dry_Avg_Wet_Flow_Plot = ggplot()+
-    # geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = nvgwmoa_cfs, group = Year_Type, color = Year_Type), size = 1.5) +
-    geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = basecase_cfs, group = Year_Type, color = Year_Type), linetype = "dashed", size = 0.8) +
-    geom_hline(yintercept = 0) +
-    # geom_line(size = 1) +
-    geom_point(size = 1.5) +
-    # scale_y_continuous(limits = dif_lim, 
-    #                    breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
-    scale_y_continuous(limits = c(1,3000), 
-                       trans="log10", breaks = 10^seq(0,4,by = 1),) +
-    annotation_logticks(sides = "l")+
-    scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
-
-    theme(#panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8),
-          legend.key = element_blank(),
-          legend.title = element_blank(),
-          legend.position = c(0.25,0.15),
-          legend.background = element_blank())
-  
-)
-
-(MAR_Dry_Avg_Wet_Flow_Plot = ggplot()+
-    geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = MAR_cfs, group = Year_Type, color = Year_Type), size = 1.5) +
-    geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = basecase_cfs, group = Year_Type, color = Year_Type), linetype = "dashed", size = 0.8) +
-    geom_hline(yintercept = 0) +
-    # geom_line(size = 1) +
-    geom_point(size = 1.5) +
-    # scale_y_continuous(limits = dif_lim, 
-    #                    breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
-    scale_y_continuous(limits = c(1,3000), 
-                       trans="log10", breaks = 10^seq(0,4,by = 1),) +
-    annotation_logticks(sides = "l")+
-    scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
-    theme(#panel.background = element_blank(),
-      panel.border = element_rect(fill=NA, color = 'black'),
-      axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-      axis.text.y = element_text(size = 8),
-      axis.ticks = element_line(size = 0.2),
-      plot.title = element_text(hjust = 0.5, size = 10),
-      axis.title.x = element_blank(),
-      axis.title.y = element_text(size = 8),
-      legend.key = element_blank(),
-      legend.title = element_blank(),
-      legend.position = c(0.25,0.15),
-      legend.background = element_blank())
-)
-
-(ILR_Dry_Avg_Wet_Flow_Plot = ggplot()+
-    geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = ILR_cfs, group = Year_Type, color = Year_Type), size = 1.5) +
-    geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = basecase_cfs, group = Year_Type, color = Year_Type), linetype = "dashed", size = 0.8) +
-    geom_hline(yintercept = 0) +
-    # geom_line(size = 1) +
-    geom_point(size = 1.5) +
-    # scale_y_continuous(limits = dif_lim, 
-    #                    breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
-    scale_y_continuous(limits = c(1,3000), 
-                       trans="log10", breaks = 10^seq(0,4,by = 1),) +
-    annotation_logticks(sides = "l")+
-    scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
-    theme(#panel.background = element_blank(),
-      panel.border = element_rect(fill=NA, color = 'black'),
-      axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-      axis.text.y = element_text(size = 8),
-      axis.ticks = element_line(size = 0.2),
-      plot.title = element_text(hjust = 0.5, size = 10),
-      axis.title.x = element_blank(),
-      axis.title.y = element_text(size = 8),
-      legend.key = element_blank(),
-      legend.title = element_blank(),
-      legend.position = c(0.25,0.15),
-      legend.background = element_blank())
-)
-
-
-
-(MAR_ILR_Dry_Avg_Wet_Flow_Plot = ggplot()+
-    geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = MAR_ILR_cfs, group = Year_Type, color = Year_Type), size = 1.5) +
-    geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = basecase_cfs, group = Year_Type, color = Year_Type), linetype = "dashed", size = 0.8) +
-    geom_hline(yintercept = 0) +
-    # geom_line(size = 1) +
-    geom_point(size = 1.5) +
-    # scale_y_continuous(limits = dif_lim, 
-    #                    breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
-    scale_y_continuous(limits = c(1,3000), 
-                       trans="log10", breaks = 10^seq(0,4,by = 1),) +
-    annotation_logticks(sides = "l")+
-    scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
-    theme(#panel.background = element_blank(),
-      panel.border = element_rect(fill=NA, color = 'black'),
-      axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-      axis.text.y = element_text(size = 8),
-      axis.ticks = element_line(size = 0.2),
-      plot.title = element_text(hjust = 0.5, size = 10),
-      axis.title.x = element_blank(),
-      axis.title.y = element_text(size = 8),
-      legend.key = element_blank(),
-      legend.title = element_blank(),
-      legend.position = c(0.25,0.15),
-      legend.background = element_blank())
-)
-
-(irrig_0.9_Dry_Avg_Wet_Flow_Plot = ggplot()+
-    geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = irrig_0.9_cfs, group = Year_Type, color = Year_Type), size = 1.5) +
-    geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = basecase_cfs, group = Year_Type, color = Year_Type), linetype = "dashed", size = 0.8) +
-    geom_hline(yintercept = 0) +
-    # geom_line(size = 1) +
-    geom_point(size = 1.5) +
-    # scale_y_continuous(limits = dif_lim, 
-    #                    breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
-    scale_y_continuous(limits = c(1,3000), 
-                       trans="log10", breaks = 10^seq(0,4,by = 1),) +
-    annotation_logticks(sides = "l")+
-    scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
-    theme(#panel.background = element_blank(),
-      panel.border = element_rect(fill=NA, color = 'black'),
-      axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-      axis.text.y = element_text(size = 8),
-      axis.ticks = element_line(size = 0.2),
-      plot.title = element_text(hjust = 0.5, size = 10),
-      axis.title.x = element_blank(),
-      axis.title.y = element_text(size = 8),
-      legend.key = element_blank(),
-      legend.title = element_blank(),
-      legend.position = c(0.25,0.15),
-      legend.background = element_blank())
-)
-
-
-(nvoa_Dry_Avg_Wet_Flow_Plot = ggplot()+
-    geom_line(data = Flow_SP_Dry_Avg_Wet, 
-              aes(x = as.numeric(Date), y = nvoa_cfs, group = Year_Type, color = Year_Type), size = 1.5) +
-    geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = basecase_cfs, group = Year_Type, color = Year_Type), linetype = "dashed", size = 0.8) +
-    geom_hline(yintercept = 0) +
-    # geom_line(size = 1) +
-    geom_point(size = 1.5) +
-    # scale_y_continuous(limits = dif_lim, 
-    #                    breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
-    scale_y_continuous(limits = c(1,3000), 
-                       trans="log10", breaks = 10^seq(0,4,by = 1),) +
-    annotation_logticks(sides = "l")+
-    scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
-    theme(#panel.background = element_blank(),
-      panel.border = element_rect(fill=NA, color = 'black'),
-      axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-      axis.text.y = element_text(size = 8),
-      axis.ticks = element_line(size = 0.2),
-      plot.title = element_text(hjust = 0.5, size = 10),
-      axis.title.x = element_blank(),
-      axis.title.y = element_text(size = 8),
-      legend.key = element_blank(),
-      legend.title = element_blank(),
-      legend.position = c(0.25,0.15),
-      legend.background = element_blank())
-  
-)
-  
-
-(nvgwmoa_Dry_Avg_Wet_Flow_Plot = ggplot()+
-    geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = nvgwmoa_cfs, group = Year_Type, color = Year_Type), size = 1.5) +
-    geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = basecase_cfs, group = Year_Type, color = Year_Type), linetype = "dashed", size = 0.8) +
-    geom_hline(yintercept = 0) +
-    # geom_line(size = 1) +
-    geom_point(size = 1.5) +
-    # scale_y_continuous(limits = dif_lim, 
-    #                    breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
-    scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
-    scale_y_continuous(limits = c(1,3000), 
-                       trans="log10", breaks = 10^seq(0,4,by = 1),) +
-    annotation_logticks(sides = "l")+
-    scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
-    theme(#panel.background = element_blank(),
-      panel.border = element_rect(fill=NA, color = 'black'),
-      axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-      axis.text.y = element_text(size = 8),
-      axis.ticks = element_line(size = 0.2),
-      plot.title = element_text(hjust = 0.5, size = 10),
-      axis.title.x = element_blank(),
-      axis.title.y = element_text(size = 8),
-      legend.key = element_blank(),
-      legend.title = element_blank(),
-      legend.position = c(0.25,0.15),
-      legend.background = element_blank())
-)
+# #.############################################################################################
+# ###############           DRY, AVERAGE, AND WET YEAR FLOW PLOTS         ###############
+# #.############################################################################################
+# 
+# Flow_SP_Dry_Avg_Wet = subset(Flow_SP_Avg,
+#                              #select = c('Date','MAR_difference_cfs', 'ILR_difference_cfs', 'MAR_ILR_difference_cfs'), 
+#                              Date %in%c(seq(as.Date("2010/1/1"), by = "month", length.out = 12),
+#                                         seq(as.Date("2014/1/1"), by = "month", length.out = 12),
+#                                         seq(as.Date("2017/1/1"), by = "month", length.out = 12)))
+# Flow_SP_Dry_Avg_Wet$Year_Type = rep(c('Average (2010)','Dry (2014)','Wet (2017)'), each=12)
+# Flow_SP_Dry_Avg_Wet$Year_Type = factor(Flow_SP_Dry_Avg_Wet$Year_Type, levels = c('Dry (2014)','Average (2010)','Wet (2017)'))
+# Flow_SP_Dry_Avg_Wet = Flow_SP_Dry_Avg_Wet[order(Flow_SP_Dry_Avg_Wet$Year_Type),]
+# Flow_SP_Dry_Avg_Wet$Date = format(Flow_SP_Dry_Avg_Wet$Date, '%m')
+# 
+# (basecase_Dry_Avg_Wet_Flow_Plot = ggplot()+
+#     # geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = nvgwmoa_cfs, group = Year_Type, color = Year_Type), size = 1.5) +
+#     geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = basecase_cfs, group = Year_Type, color = Year_Type), linetype = "dashed", size = 0.8) +
+#     geom_hline(yintercept = 0) +
+#     # geom_line(size = 1) +
+#     geom_point(size = 1.5) +
+#     # scale_y_continuous(limits = dif_lim, 
+#     #                    breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
+#     scale_y_continuous(limits = c(1,3000), 
+#                        trans="log10", breaks = 10^seq(0,4,by = 1),) +
+#     annotation_logticks(sides = "l")+
+#     scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
+# 
+#     theme(#panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8),
+#           legend.key = element_blank(),
+#           legend.title = element_blank(),
+#           legend.position = c(0.25,0.15),
+#           legend.background = element_blank())
+#   
+# )
+# 
+# (MAR_Dry_Avg_Wet_Flow_Plot = ggplot()+
+#     geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = MAR_cfs, group = Year_Type, color = Year_Type), size = 1.5) +
+#     geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = basecase_cfs, group = Year_Type, color = Year_Type), linetype = "dashed", size = 0.8) +
+#     geom_hline(yintercept = 0) +
+#     # geom_line(size = 1) +
+#     geom_point(size = 1.5) +
+#     # scale_y_continuous(limits = dif_lim, 
+#     #                    breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
+#     scale_y_continuous(limits = c(1,3000), 
+#                        trans="log10", breaks = 10^seq(0,4,by = 1),) +
+#     annotation_logticks(sides = "l")+
+#     scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
+#     theme(#panel.background = element_blank(),
+#       panel.border = element_rect(fill=NA, color = 'black'),
+#       axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#       axis.text.y = element_text(size = 8),
+#       axis.ticks = element_line(size = 0.2),
+#       plot.title = element_text(hjust = 0.5, size = 10),
+#       axis.title.x = element_blank(),
+#       axis.title.y = element_text(size = 8),
+#       legend.key = element_blank(),
+#       legend.title = element_blank(),
+#       legend.position = c(0.25,0.15),
+#       legend.background = element_blank())
+# )
+# 
+# (ILR_Dry_Avg_Wet_Flow_Plot = ggplot()+
+#     geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = ILR_cfs, group = Year_Type, color = Year_Type), size = 1.5) +
+#     geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = basecase_cfs, group = Year_Type, color = Year_Type), linetype = "dashed", size = 0.8) +
+#     geom_hline(yintercept = 0) +
+#     # geom_line(size = 1) +
+#     geom_point(size = 1.5) +
+#     # scale_y_continuous(limits = dif_lim, 
+#     #                    breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
+#     scale_y_continuous(limits = c(1,3000), 
+#                        trans="log10", breaks = 10^seq(0,4,by = 1),) +
+#     annotation_logticks(sides = "l")+
+#     scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
+#     theme(#panel.background = element_blank(),
+#       panel.border = element_rect(fill=NA, color = 'black'),
+#       axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#       axis.text.y = element_text(size = 8),
+#       axis.ticks = element_line(size = 0.2),
+#       plot.title = element_text(hjust = 0.5, size = 10),
+#       axis.title.x = element_blank(),
+#       axis.title.y = element_text(size = 8),
+#       legend.key = element_blank(),
+#       legend.title = element_blank(),
+#       legend.position = c(0.25,0.15),
+#       legend.background = element_blank())
+# )
+# 
+# 
+# 
+# (MAR_ILR_Dry_Avg_Wet_Flow_Plot = ggplot()+
+#     geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = MAR_ILR_cfs, group = Year_Type, color = Year_Type), size = 1.5) +
+#     geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = basecase_cfs, group = Year_Type, color = Year_Type), linetype = "dashed", size = 0.8) +
+#     geom_hline(yintercept = 0) +
+#     # geom_line(size = 1) +
+#     geom_point(size = 1.5) +
+#     # scale_y_continuous(limits = dif_lim, 
+#     #                    breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
+#     scale_y_continuous(limits = c(1,3000), 
+#                        trans="log10", breaks = 10^seq(0,4,by = 1),) +
+#     annotation_logticks(sides = "l")+
+#     scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
+#     theme(#panel.background = element_blank(),
+#       panel.border = element_rect(fill=NA, color = 'black'),
+#       axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#       axis.text.y = element_text(size = 8),
+#       axis.ticks = element_line(size = 0.2),
+#       plot.title = element_text(hjust = 0.5, size = 10),
+#       axis.title.x = element_blank(),
+#       axis.title.y = element_text(size = 8),
+#       legend.key = element_blank(),
+#       legend.title = element_blank(),
+#       legend.position = c(0.25,0.15),
+#       legend.background = element_blank())
+# )
+# 
+# (irrig_0.9_Dry_Avg_Wet_Flow_Plot = ggplot()+
+#     geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = irrig_0.9_cfs, group = Year_Type, color = Year_Type), size = 1.5) +
+#     geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = basecase_cfs, group = Year_Type, color = Year_Type), linetype = "dashed", size = 0.8) +
+#     geom_hline(yintercept = 0) +
+#     # geom_line(size = 1) +
+#     geom_point(size = 1.5) +
+#     # scale_y_continuous(limits = dif_lim, 
+#     #                    breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
+#     scale_y_continuous(limits = c(1,3000), 
+#                        trans="log10", breaks = 10^seq(0,4,by = 1),) +
+#     annotation_logticks(sides = "l")+
+#     scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
+#     theme(#panel.background = element_blank(),
+#       panel.border = element_rect(fill=NA, color = 'black'),
+#       axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#       axis.text.y = element_text(size = 8),
+#       axis.ticks = element_line(size = 0.2),
+#       plot.title = element_text(hjust = 0.5, size = 10),
+#       axis.title.x = element_blank(),
+#       axis.title.y = element_text(size = 8),
+#       legend.key = element_blank(),
+#       legend.title = element_blank(),
+#       legend.position = c(0.25,0.15),
+#       legend.background = element_blank())
+# )
+# 
+# 
+# (nvoa_Dry_Avg_Wet_Flow_Plot = ggplot()+
+#     geom_line(data = Flow_SP_Dry_Avg_Wet, 
+#               aes(x = as.numeric(Date), y = nvoa_cfs, group = Year_Type, color = Year_Type), size = 1.5) +
+#     geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = basecase_cfs, group = Year_Type, color = Year_Type), linetype = "dashed", size = 0.8) +
+#     geom_hline(yintercept = 0) +
+#     # geom_line(size = 1) +
+#     geom_point(size = 1.5) +
+#     # scale_y_continuous(limits = dif_lim, 
+#     #                    breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
+#     scale_y_continuous(limits = c(1,3000), 
+#                        trans="log10", breaks = 10^seq(0,4,by = 1),) +
+#     annotation_logticks(sides = "l")+
+#     scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
+#     theme(#panel.background = element_blank(),
+#       panel.border = element_rect(fill=NA, color = 'black'),
+#       axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#       axis.text.y = element_text(size = 8),
+#       axis.ticks = element_line(size = 0.2),
+#       plot.title = element_text(hjust = 0.5, size = 10),
+#       axis.title.x = element_blank(),
+#       axis.title.y = element_text(size = 8),
+#       legend.key = element_blank(),
+#       legend.title = element_blank(),
+#       legend.position = c(0.25,0.15),
+#       legend.background = element_blank())
+#   
+# )
+#   
+# 
+# (nvgwmoa_Dry_Avg_Wet_Flow_Plot = ggplot()+
+#     geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = nvgwmoa_cfs, group = Year_Type, color = Year_Type), size = 1.5) +
+#     geom_line(data = Flow_SP_Dry_Avg_Wet, aes(x = as.numeric(Date), y = basecase_cfs, group = Year_Type, color = Year_Type), linetype = "dashed", size = 0.8) +
+#     geom_hline(yintercept = 0) +
+#     # geom_line(size = 1) +
+#     geom_point(size = 1.5) +
+#     # scale_y_continuous(limits = dif_lim, 
+#     #                    breaks = seq(dif_lim[1], dif_lim[2],by = 20), expand = c(0,0)) +
+#     scale_x_continuous(limits = c(0.5,12.5), breaks = seq(1,12,by = 1), expand = c(0,0), labels = format(seq(as.Date("2001/1/1"), by = "month", length.out = 12),'%b')) +
+#     scale_y_continuous(limits = c(1,3000), 
+#                        trans="log10", breaks = 10^seq(0,4,by = 1),) +
+#     annotation_logticks(sides = "l")+
+#     scale_color_manual(values = c('orangered','darkgoldenrod2','cornflowerblue')) +
+#     theme(#panel.background = element_blank(),
+#       panel.border = element_rect(fill=NA, color = 'black'),
+#       axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#       axis.text.y = element_text(size = 8),
+#       axis.ticks = element_line(size = 0.2),
+#       plot.title = element_text(hjust = 0.5, size = 10),
+#       axis.title.x = element_blank(),
+#       axis.title.y = element_text(size = 8),
+#       legend.key = element_blank(),
+#       legend.title = element_blank(),
+#       legend.position = c(0.25,0.15),
+#       legend.background = element_blank())
+# )
 
 # (nvoa_1.0_Dry_Avg_Wet_Flow_Plot = ggplot()+
 #     geom_line(data = Flow_SP_Dry_Avg_Wet, 
@@ -1689,150 +1703,150 @@ Flow_SP_Dry_Avg_Wet$Date = format(Flow_SP_Dry_Avg_Wet$Date, '%m')
 
 # Print figures to file ---------------------------------------------------
 
-if (graphics_type == 'pdf'){pdf(paste0(flow_loc_short,'_Avg_Flow_cfs.pdf'), width = 3.5, height = 3)
-} else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_Avg_Flow_cfs.png'), width = 3.5, height = 2, units = 'in', res = 600 )}
-grid.newpage()
+# if (graphics_type == 'pdf'){pdf(paste0(flow_loc_short,'_Avg_Flow_cfs.pdf'), width = 3.5, height = 3)
+# } else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_Avg_Flow_cfs.png'), width = 3.5, height = 2, units = 'in', res = 600 )}
+# grid.newpage()
+# # pushViewport(viewport(layout = grid.layout(1,2)))
+# # vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+# print(Monthly_Avg_Flow_Plot + 
+#         ylab('Average Daily Streamflow (cfs)'),
+#       # vp = vplayout(1,1)
+#       )
+# graphics.off()
+# 
+# 
+# if (graphics_type == 'pdf'){pdf(paste0(flow_loc_short,'_basecase_Flow_cfs.pdf'), width = 7, height = 3)
+# } else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_basecase_Flow_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
+# grid.newpage()
 # pushViewport(viewport(layout = grid.layout(1,2)))
 # vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-print(Monthly_Avg_Flow_Plot + 
-        ylab('Average Daily Streamflow (cfs)'),
-      # vp = vplayout(1,1)
-      )
-graphics.off()
-
-
-if (graphics_type == 'pdf'){pdf(paste0(flow_loc_short,'_basecase_Flow_cfs.pdf'), width = 7, height = 3)
-} else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_basecase_Flow_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(1,2)))
-vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-print(Monthly_Avg_Flow_Plot + 
-        ylab('Average Daily Streamflow (cfs)'),
-      vp = vplayout(1,1))
-print(basecase_Dry_Avg_Wet_Flow_Plot +
-        ylab(''),
-      vp = vplayout(1,2))
-graphics.off()
-
-
-
-if (graphics_type == 'pdf'){pdf(paste0(flow_loc_short,'_MAR_Flow_Diff_cfs.pdf'), width = 7, height = 3)
-} else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_MAR_Flow_Diff_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(1,2)))
-vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-print(MAR_Monthly_Avg_Plot + 
-      ylab('Streamflow Difference (cfs)'),
-      vp = vplayout(1,1))
-print(MAR_Dry_Avg_Wet_Diff_Plot +
-       ylab(''),
-      vp = vplayout(1,2))
-graphics.off()
-
-if (graphics_type == 'pdf'){pdf('ILR_Flow_Diff_cfs.pdf', width = 7, height = 3)
-} else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_ILR_Flow_Diff_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(1,2)))
-vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-print(ILR_Monthly_Avg_Plot + 
-        ylab('Streamflow Difference (cfs)'),
-      vp = vplayout(1,1))
-print(ILR_Dry_Avg_Wet_Diff_Plot +
-        ylab(''),
-      vp = vplayout(1,2))
-graphics.off()
-
-if (graphics_type == 'pdf'){pdf('MAR_ILR_Flow_Diff_cfs.pdf', width = 7, height = 3)
-} else if (graphics_type == 'png'){ png(paste0(flow_loc_short,'_MAR_ILR_Flow_Diff_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(1,2)))
-vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-print(MAR_ILR_Monthly_Avg_Plot + 
-        ylab('Streamflow Difference (cfs)'),
-      vp = vplayout(1,1))
-print(MAR_ILR_Dry_Avg_Wet_Diff_Plot +
-        ylab(''),
-      vp = vplayout(1,2))
-graphics.off()
-
-if (graphics_type == 'pdf'){pdf('MAR_ILR_Flowlims_Flow_Diff_cfs.pdf', width = 7, height = 3)
-} else if (graphics_type == 'png'){ png(paste0(flow_loc_short,'_MAR_ILR_Flowlims_Flow_Diff_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(1,2)))
-vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-print(MAR_ILR_Flowlims_Monthly_Avg_Plot + 
-        ylab('Streamflow Difference (cfs)'),
-      vp = vplayout(1,1))
-print(MAR_ILR_Flowlims_Dry_Avg_Wet_Diff_Plot +
-        ylab(''),
-      vp = vplayout(1,2))
-graphics.off()
-
-if (graphics_type == 'pdf'){pdf('Flowlims_Flow_Diff_cfs.pdf', width = 7, height = 3)
-} else if (graphics_type == 'png'){ png(paste0(flow_loc_short,'_Flowlims_Flow_Diff_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(1,2)))
-vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-print(Flowlims_Monthly_Avg_Plot + 
-        ylab('Streamflow Difference (cfs)'),
-      vp = vplayout(1,1))
-print(Flowlims_Dry_Avg_Wet_Diff_Plot +
-        ylab(''),
-      vp = vplayout(1,2))
-graphics.off()
-
-if (graphics_type == 'pdf'){pdf('Irrig_0.8_Flow_Diff_cfs.pdf', width = 7, height = 3)
-} else if (graphics_type == 'png'){ png(paste0(flow_loc_short,'_Irrig_0.8_Flow_Diff_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(1,2)))
-vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-print(Irrig_0.8_Monthly_Avg_Plot + 
-        ylab('Streamflow Difference (cfs)'),
-      vp = vplayout(1,1))
-print(Irrig_0.8_Dry_Avg_Wet_Diff_Plot +
-        ylab(''),
-      vp = vplayout(1,2))
-graphics.off()
-
-if (graphics_type == 'pdf'){pdf('Irrig_0.9_Flow_Diff_cfs.pdf', width = 7, height = 3)
-} else if (graphics_type == 'png'){ png(paste0(flow_loc_short,'Irrig_0.9_Flow_Diff_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(1,2)))
-vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-print(Irrig_0.9_Monthly_Avg_Plot + 
-        ylab('Streamflow Difference (cfs)'),
-      vp = vplayout(1,1))
-print(Irrig_0.9_Dry_Avg_Wet_Diff_Plot +
-        ylab(''),
-      vp = vplayout(1,2))
-graphics.off()
-
-
-if (graphics_type == 'pdf'){pdf('nvoa_Flow_Diff_cfs.pdf', width = 7, height = 3)
-} else if (graphics_type == 'png'){ png(paste0(flow_loc_short,'nvoa_Flow_Diff_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(1,2)))
-vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-print(nvoa_Monthly_Avg_Plot + 
-        ylab('Streamflow Difference (cfs)'),
-      vp = vplayout(1,1))
-print(nvoa_Dry_Avg_Wet_Diff_Plot +
-        ylab(''),
-      vp = vplayout(1,2))
-graphics.off()
-
-if (graphics_type == 'pdf'){pdf('nvgwmoa_Flow_Diff_cfs.pdf', width = 7, height = 3)
-} else if (graphics_type == 'png'){ png(paste0(flow_loc_short,'nvgwmoa_Flow_Diff_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(1,2)))
-vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-print(nvgwmoa_Monthly_Avg_Plot + 
-        ylab('Streamflow Difference (cfs)'),
-      vp = vplayout(1,1))
-print(nvgwmoa_Dry_Avg_Wet_Diff_Plot +
-        ylab(''),
-      vp = vplayout(1,2))
-graphics.off()
+# print(Monthly_Avg_Flow_Plot + 
+#         ylab('Average Daily Streamflow (cfs)'),
+#       vp = vplayout(1,1))
+# print(basecase_Dry_Avg_Wet_Flow_Plot +
+#         ylab(''),
+#       vp = vplayout(1,2))
+# graphics.off()
+# 
+# 
+# 
+# if (graphics_type == 'pdf'){pdf(paste0(flow_loc_short,'_MAR_Flow_Diff_cfs.pdf'), width = 7, height = 3)
+# } else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_MAR_Flow_Diff_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
+# grid.newpage()
+# pushViewport(viewport(layout = grid.layout(1,2)))
+# vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+# print(MAR_Monthly_Avg_Plot + 
+#       ylab('Streamflow Difference (cfs)'),
+#       vp = vplayout(1,1))
+# print(MAR_Dry_Avg_Wet_Diff_Plot +
+#        ylab(''),
+#       vp = vplayout(1,2))
+# graphics.off()
+# 
+# if (graphics_type == 'pdf'){pdf('ILR_Flow_Diff_cfs.pdf', width = 7, height = 3)
+# } else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_ILR_Flow_Diff_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
+# grid.newpage()
+# pushViewport(viewport(layout = grid.layout(1,2)))
+# vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+# print(ILR_Monthly_Avg_Plot + 
+#         ylab('Streamflow Difference (cfs)'),
+#       vp = vplayout(1,1))
+# print(ILR_Dry_Avg_Wet_Diff_Plot +
+#         ylab(''),
+#       vp = vplayout(1,2))
+# graphics.off()
+# 
+# if (graphics_type == 'pdf'){pdf('MAR_ILR_Flow_Diff_cfs.pdf', width = 7, height = 3)
+# } else if (graphics_type == 'png'){ png(paste0(flow_loc_short,'_MAR_ILR_Flow_Diff_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
+# grid.newpage()
+# pushViewport(viewport(layout = grid.layout(1,2)))
+# vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+# print(MAR_ILR_Monthly_Avg_Plot + 
+#         ylab('Streamflow Difference (cfs)'),
+#       vp = vplayout(1,1))
+# print(MAR_ILR_Dry_Avg_Wet_Diff_Plot +
+#         ylab(''),
+#       vp = vplayout(1,2))
+# graphics.off()
+# 
+# if (graphics_type == 'pdf'){pdf('MAR_ILR_Flowlims_Flow_Diff_cfs.pdf', width = 7, height = 3)
+# } else if (graphics_type == 'png'){ png(paste0(flow_loc_short,'_MAR_ILR_Flowlims_Flow_Diff_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
+# grid.newpage()
+# pushViewport(viewport(layout = grid.layout(1,2)))
+# vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+# print(MAR_ILR_Flowlims_Monthly_Avg_Plot + 
+#         ylab('Streamflow Difference (cfs)'),
+#       vp = vplayout(1,1))
+# print(MAR_ILR_Flowlims_Dry_Avg_Wet_Diff_Plot +
+#         ylab(''),
+#       vp = vplayout(1,2))
+# graphics.off()
+# 
+# if (graphics_type == 'pdf'){pdf('Flowlims_Flow_Diff_cfs.pdf', width = 7, height = 3)
+# } else if (graphics_type == 'png'){ png(paste0(flow_loc_short,'_Flowlims_Flow_Diff_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
+# grid.newpage()
+# pushViewport(viewport(layout = grid.layout(1,2)))
+# vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+# print(Flowlims_Monthly_Avg_Plot + 
+#         ylab('Streamflow Difference (cfs)'),
+#       vp = vplayout(1,1))
+# print(Flowlims_Dry_Avg_Wet_Diff_Plot +
+#         ylab(''),
+#       vp = vplayout(1,2))
+# graphics.off()
+# 
+# if (graphics_type == 'pdf'){pdf('Irrig_0.8_Flow_Diff_cfs.pdf', width = 7, height = 3)
+# } else if (graphics_type == 'png'){ png(paste0(flow_loc_short,'_Irrig_0.8_Flow_Diff_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
+# grid.newpage()
+# pushViewport(viewport(layout = grid.layout(1,2)))
+# vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+# print(Irrig_0.8_Monthly_Avg_Plot + 
+#         ylab('Streamflow Difference (cfs)'),
+#       vp = vplayout(1,1))
+# print(Irrig_0.8_Dry_Avg_Wet_Diff_Plot +
+#         ylab(''),
+#       vp = vplayout(1,2))
+# graphics.off()
+# 
+# if (graphics_type == 'pdf'){pdf('Irrig_0.9_Flow_Diff_cfs.pdf', width = 7, height = 3)
+# } else if (graphics_type == 'png'){ png(paste0(flow_loc_short,'Irrig_0.9_Flow_Diff_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
+# grid.newpage()
+# pushViewport(viewport(layout = grid.layout(1,2)))
+# vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+# print(Irrig_0.9_Monthly_Avg_Plot + 
+#         ylab('Streamflow Difference (cfs)'),
+#       vp = vplayout(1,1))
+# print(Irrig_0.9_Dry_Avg_Wet_Diff_Plot +
+#         ylab(''),
+#       vp = vplayout(1,2))
+# graphics.off()
+# 
+# 
+# if (graphics_type == 'pdf'){pdf('nvoa_Flow_Diff_cfs.pdf', width = 7, height = 3)
+# } else if (graphics_type == 'png'){ png(paste0(flow_loc_short,'nvoa_Flow_Diff_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
+# grid.newpage()
+# pushViewport(viewport(layout = grid.layout(1,2)))
+# vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+# print(nvoa_Monthly_Avg_Plot + 
+#         ylab('Streamflow Difference (cfs)'),
+#       vp = vplayout(1,1))
+# print(nvoa_Dry_Avg_Wet_Diff_Plot +
+#         ylab(''),
+#       vp = vplayout(1,2))
+# graphics.off()
+# 
+# if (graphics_type == 'pdf'){pdf('nvgwmoa_Flow_Diff_cfs.pdf', width = 7, height = 3)
+# } else if (graphics_type == 'png'){ png(paste0(flow_loc_short,'nvgwmoa_Flow_Diff_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
+# grid.newpage()
+# pushViewport(viewport(layout = grid.layout(1,2)))
+# vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+# print(nvgwmoa_Monthly_Avg_Plot + 
+#         ylab('Streamflow Difference (cfs)'),
+#       vp = vplayout(1,1))
+# print(nvgwmoa_Dry_Avg_Wet_Diff_Plot +
+#         ylab(''),
+#       vp = vplayout(1,2))
+# graphics.off()
 
 
 # if (graphics_type == 'pdf'){pdf('nvoa_1.0_Flow_Diff_cfs.pdf', width = 7, height = 3)
@@ -1862,85 +1876,85 @@ graphics.off()
 # graphics.off()
 
 
-if (graphics_type == 'pdf'){pdf(paste0(flow_loc_short,'_nvoa_Flow_cfs.pdf'), width = 7, height = 3)
-} else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_nvoa_Flow_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(1,2)))
-vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-print(Monthly_Avg_Flow_Plot + 
-        ylab('Average Daily Streamflow (cfs)'),
-      vp = vplayout(1,1))
-print(nvoa_Dry_Avg_Wet_Flow_Plot +
-        ylab(''),
-      vp = vplayout(1,2))
-graphics.off()
-
-if (graphics_type == 'pdf'){pdf(paste0(flow_loc_short,'_MAR_Flow_cfs.pdf'), width = 7, height = 3)
-} else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_MAR_Flow_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(1,2)))
-vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-print(Monthly_Avg_Flow_Plot + 
-        ylab('Average Daily Streamflow (cfs)'),
-      vp = vplayout(1,1))
-print(MAR_Dry_Avg_Wet_Flow_Plot +
-        ylab(''),
-      vp = vplayout(1,2))
-graphics.off()
-
-if (graphics_type == 'pdf'){pdf(paste0(flow_loc_short,'_ILR_Flow_cfs.pdf'), width = 7, height = 3)
-} else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_ILR_Flow_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(1,2)))
-vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-print(Monthly_Avg_Flow_Plot + 
-        ylab('Average Daily Streamflow (cfs)'),
-      vp = vplayout(1,1))
-print(ILR_Dry_Avg_Wet_Flow_Plot +
-        ylab(''),
-      vp = vplayout(1,2))
-graphics.off()
-
-if (graphics_type == 'pdf'){pdf(paste0(flow_loc_short,'_MAR_ILR_Flow_cfs.pdf'), width = 7, height = 3)
-} else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_MAR_ILR_Flow_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(1,2)))
-vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-print(Monthly_Avg_Flow_Plot + 
-        ylab('Average Daily Streamflow (cfs)'),
-      vp = vplayout(1,1))
-print(MAR_ILR_Dry_Avg_Wet_Flow_Plot +
-        ylab(''),
-      vp = vplayout(1,2))
-graphics.off()
-
-
-if (graphics_type == 'pdf'){pdf(paste0(flow_loc_short,'_irrig_0.9_Flow_cfs.pdf'), width = 7, height = 3)
-} else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_irrig_0.9_Flow_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(1,2)))
-vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-print(Monthly_Avg_Flow_Plot + 
-        ylab('Average Daily Streamflow (cfs)'),
-      vp = vplayout(1,1))
-print(irrig_0.9_Dry_Avg_Wet_Flow_Plot +
-        ylab(''),
-      vp = vplayout(1,2))
-graphics.off()
-
-
-if (graphics_type == 'pdf'){pdf(paste0(flow_loc_short,'_nvgwmoa_Flow_cfs.pdf'), width = 7, height = 3)
-} else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_nvgwmoa_Flow_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(1,2)))
-vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-print(Monthly_Avg_Flow_Plot + 
-        ylab('Average Daily Streamflow (cfs)'),
-      vp = vplayout(1,1))
-print(nvgwmoa_Dry_Avg_Wet_Flow_Plot +
-        ylab(''),
-      vp = vplayout(1,2))
-graphics.off()
+# if (graphics_type == 'pdf'){pdf(paste0(flow_loc_short,'_nvoa_Flow_cfs.pdf'), width = 7, height = 3)
+# } else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_nvoa_Flow_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
+# grid.newpage()
+# pushViewport(viewport(layout = grid.layout(1,2)))
+# vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+# print(Monthly_Avg_Flow_Plot + 
+#         ylab('Average Daily Streamflow (cfs)'),
+#       vp = vplayout(1,1))
+# print(nvoa_Dry_Avg_Wet_Flow_Plot +
+#         ylab(''),
+#       vp = vplayout(1,2))
+# graphics.off()
+# 
+# if (graphics_type == 'pdf'){pdf(paste0(flow_loc_short,'_MAR_Flow_cfs.pdf'), width = 7, height = 3)
+# } else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_MAR_Flow_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
+# grid.newpage()
+# pushViewport(viewport(layout = grid.layout(1,2)))
+# vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+# print(Monthly_Avg_Flow_Plot + 
+#         ylab('Average Daily Streamflow (cfs)'),
+#       vp = vplayout(1,1))
+# print(MAR_Dry_Avg_Wet_Flow_Plot +
+#         ylab(''),
+#       vp = vplayout(1,2))
+# graphics.off()
+# 
+# if (graphics_type == 'pdf'){pdf(paste0(flow_loc_short,'_ILR_Flow_cfs.pdf'), width = 7, height = 3)
+# } else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_ILR_Flow_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
+# grid.newpage()
+# pushViewport(viewport(layout = grid.layout(1,2)))
+# vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+# print(Monthly_Avg_Flow_Plot + 
+#         ylab('Average Daily Streamflow (cfs)'),
+#       vp = vplayout(1,1))
+# print(ILR_Dry_Avg_Wet_Flow_Plot +
+#         ylab(''),
+#       vp = vplayout(1,2))
+# graphics.off()
+# 
+# if (graphics_type == 'pdf'){pdf(paste0(flow_loc_short,'_MAR_ILR_Flow_cfs.pdf'), width = 7, height = 3)
+# } else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_MAR_ILR_Flow_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
+# grid.newpage()
+# pushViewport(viewport(layout = grid.layout(1,2)))
+# vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+# print(Monthly_Avg_Flow_Plot + 
+#         ylab('Average Daily Streamflow (cfs)'),
+#       vp = vplayout(1,1))
+# print(MAR_ILR_Dry_Avg_Wet_Flow_Plot +
+#         ylab(''),
+#       vp = vplayout(1,2))
+# graphics.off()
+# 
+# 
+# if (graphics_type == 'pdf'){pdf(paste0(flow_loc_short,'_irrig_0.9_Flow_cfs.pdf'), width = 7, height = 3)
+# } else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_irrig_0.9_Flow_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
+# grid.newpage()
+# pushViewport(viewport(layout = grid.layout(1,2)))
+# vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+# print(Monthly_Avg_Flow_Plot + 
+#         ylab('Average Daily Streamflow (cfs)'),
+#       vp = vplayout(1,1))
+# print(irrig_0.9_Dry_Avg_Wet_Flow_Plot +
+#         ylab(''),
+#       vp = vplayout(1,2))
+# graphics.off()
+# 
+# 
+# if (graphics_type == 'pdf'){pdf(paste0(flow_loc_short,'_nvgwmoa_Flow_cfs.pdf'), width = 7, height = 3)
+# } else if (graphics_type == 'png'){png(paste0(flow_loc_short,'_nvgwmoa_Flow_cfs.png'), width = 7, height = 3, units = 'in', res = 600 )}
+# grid.newpage()
+# pushViewport(viewport(layout = grid.layout(1,2)))
+# vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+# print(Monthly_Avg_Flow_Plot + 
+#         ylab('Average Daily Streamflow (cfs)'),
+#       vp = vplayout(1,1))
+# print(nvgwmoa_Dry_Avg_Wet_Flow_Plot +
+#         ylab(''),
+#       vp = vplayout(1,2))
+# graphics.off()
 
 
 
@@ -2015,139 +2029,147 @@ graphics.off()
 
 
 
+
+# Setting a MT example ----------------------------------------------------
+
+
+# dry_basecase = Flow_SP_Dry_Avg_Wet$basecase_cfs[Flow_SP_Dry_Avg_Wet$Year_Type == "Dry (2014)"]
+# dry_nvgwmoa = Flow_SP_Dry_Avg_Wet$nvgwmoa_cfs[Flow_SP_Dry_Avg_Wet$Year_Type == "Dry (2014)"]
+# dry_mar_ilr = Flow_SP_Dry_Avg_Wet$MAR_ILR_cfs[Flow_SP_Dry_Avg_Wet$Year_Type == "Dry (2014)"]
+# avg_basecase = Flow_SP_Dry_Avg_Wet$basecase_cfs[Flow_SP_Dry_Avg_Wet$Year_Type == "Average (2010)"]
+# avg_nvgwmoa = Flow_SP_Dry_Avg_Wet$nvgwmoa_cfs[Flow_SP_Dry_Avg_Wet$Year_Type == "Average (2010)"]
+# avg_mar_ilr = Flow_SP_Dry_Avg_Wet$MAR_ILR_cfs[Flow_SP_Dry_Avg_Wet$Year_Type == "Average (2010)"]
+# wet_basecase = Flow_SP_Dry_Avg_Wet$basecase_cfs[Flow_SP_Dry_Avg_Wet$Year_Type == "Wet (2017)"]
+# wet_nvgwmoa = Flow_SP_Dry_Avg_Wet$nvgwmoa_cfs[Flow_SP_Dry_Avg_Wet$Year_Type == "Wet (2017)"]
+# wet_mar_ilr = Flow_SP_Dry_Avg_Wet$MAR_ILR_cfs[Flow_SP_Dry_Avg_Wet$Year_Type == "Wet (2017)"]
+# 
+# png(filename = "MT mar_ilr 2.png", width = 8.9, height = 6.1, units = "in", res = 300)
+# 
+# par(mfrow = c(2,2))
+# 
+# mar=c(5,4,4,2)
+# plot(dry_basecase, type = "l", lty = 1, log = "y", xaxt = "n",
+#      main = "FJ Streamflow, NV-GWM-OA and Basecase", xlab = "Month",
+#      col = "red", ylim = c(1, 2600), ylab = "Avg Daily Streamflow (cfs)")
+# lines(dry_nvgwmoa, lty = 2, col = "red")
+# lines(dry_mar_ilr, lty = 3, col = "red")
+# lines(avg_basecase, lty = 1, col = "goldenrod")
+# lines(avg_nvgwmoa, lty = 2, col = "goldenrod")
+# lines(avg_mar_ilr, lty = 3, col = "goldenrod")
+# lines(wet_basecase, lty = 1, col = "dodgerblue")
+# lines(wet_nvgwmoa, lty = 2, col = "dodgerblue")
+# lines(wet_mar_ilr, lty = 3, col = "dodgerblue")
+# axis(side = 1, at = 1:12, labels = month.abb[1:12])
+# grid()
+# legend(x = "bottomleft" , lty = c(1,2,3), legend = c("Basecase", "NV-GWM-OA", "MAR+ILR"))
+# 
+# dmi_diff = dry_mar_ilr-dry_basecase; dmi_diff[dmi_diff <0]=0 
+# dnv_diff = dry_nvgwmoa-dry_basecase; dnv_diff[dnv_diff<0]=0 
+# round(dmi_diff/dnv_diff*100)
+# 
+# ami_diff = avg_mar_ilr-avg_basecase; ami_diff[ami_diff <0]=0 
+# anv_diff = avg_nvgwmoa-avg_basecase; anv_diff[anv_diff<0]=0 
+# round(ami_diff/anv_diff*100)
+# 
+# wmi_diff = wet_mar_ilr-wet_basecase; wmi_diff[wmi_diff <0]=0 
+# wnv_diff = wet_nvgwmoa-wet_basecase; wnv_diff[wnv_diff<0]=0 
+# round(wmi_diff/wnv_diff*100)
+# 
+# round((dry_mar_ilr-dry_basecase) / (dry_nvgwmoa-dry_basecase) * 100 )
+# round((avg_mar_ilr-avg_basecase) / (avg_nvgwmoa-avg_basecase) * 100 )
+# round((wet_mar_ilr-dry_basecase) / (wet_nvgwmoa-dry_basecase) * 100 )
+# 
+# 
+# # Schematic MT setting
+# 
+# mar=c(3,3,2,2)
+# plot(1:12, dry_nvgwmoa-dry_basecase, type = "l", #log = "y", 
+#      col = "red", lwd = 2, lty = 1, ylim = c(-10, 80), xaxt = "n", xlab = "",
+#      # main = "Total Stream Depletion, NVGWMOA - Basecase",
+#      ylab = "Avg Daily Depletion (cfs)")
+# lines(1:12, 0.75*(dry_nvgwmoa-dry_basecase), lty = 2, lwd = 2, col = "red")
+# lines(1:12, 0.50*(dry_nvgwmoa-dry_basecase), lty = 3, lwd = 2, col = "red")
+# axis(side = 1, at = 1:12, labels = month.abb[1:12])
+# grid()
+#  legend(x = "topleft", lty = c(1,2,3), legend = c("Total Depletion", "75% Reversed Depletion MT","50% Reversed Depletion MT"))
+# abline(h=0, lwd=2, col = "darkgray")
+# 
+# plot(1:12, avg_nvgwmoa-avg_basecase, type = "l",  xaxt = "n", xlab = "", 
+#      lwd = 2, col = "goldenrod", ylim = c(-10, 80),
+#      #main = 
+#      ylab = "Avg Daily Depletion (cfs)")
+# lines(1:12, 0.75*(avg_nvgwmoa-avg_basecase), lty = 2, lwd = 2, col = "goldenrod")
+# lines(1:12, 0.50*(avg_nvgwmoa-avg_basecase), lty = 3, lwd = 2, col = "goldenrod")
+# axis(side = 1, at = 1:12, labels = month.abb[1:12])
+# grid()
+# # legend(x = "bottomright", lty = c(2,1), legend = c("Total Depletion", "50% Reversed Depletion MT"))
+# abline(h=0, lwd=2, col = "darkgray")
+# 
+# 
+# plot(1:12, wet_nvgwmoa-wet_basecase, lwd = 2, col = "dodgerblue",
+#      ylim = c(-10, 80), type = "l", xaxt = "n", xlab = "",
+#      ylab = "Avg Daily Depletion (cfs)")
+# lines(1:12, 0.75*(wet_nvgwmoa-wet_basecase), lty = 2, lwd = 2, col = "dodgerblue")
+# lines(1:12, 0.50*(wet_nvgwmoa-wet_basecase), lty = 3, lwd = 2, col = "dodgerblue")
+# axis(side = 1, at = 1:12, labels = month.abb[1:12])
+# grid()
+# # legend(x = "bottomright", lty = c(2,1), legend = c("Total Depletion", "50% Reversed Depletion MT"))
+# abline(h=0, lwd=2, col = "darkgray")
+# 
+# dev.off()
+# 
+# 
+# 
+# # Example MT setting - MAR + ILR scenario
+# 
+# png(filename = "MT mar_ilr 3.png", width = 8.9, height = 6.1, units = "in", res = 300)
+# 
+# mar=c(3,3,2,2)
+# plot(1:12, dry_nvgwmoa-dry_basecase, type = "l", #log = "y", 
+#      col = "red", lwd = 2, lty = 1, ylim = c(-10, 80), xaxt = "n", xlab = "",
+#      # main = "Total Stream Depletion, NVGWMOA - Basecase",
+#      ylab = "Avg Daily Depletion (cfs)")
+# lines(1:12, (dry_mar_ilr-dry_basecase), lty = 2, lwd = 2, col = "red")
+# # lines(1:12, 0.75*(dry_mar_ilr-dry_basecase), lty = 2, lwd = 2, col = "red")
+# # lines(1:12, 0.50*(dry_nvgwmoa-dry_basecase), lty = 3, lwd = 2, col = "red")
+# axis(side = 1, at = 1:12, labels = month.abb[1:12])
+# grid()
+# legend(x = "topleft", lty = c(1,2,3), legend = c("Total Depletion", "MAR+ILR Depletion"))
+# # legend(x = "topleft", lty = c(1,2,3), legend = c("Total Depletion", "25% Reversed Depletion MT","50% Reversed Depletion MT"))
+# abline(h=0, lwd=2, col = "darkgray")
+# 
+# plot(1:12, avg_nvgwmoa-avg_basecase, type = "l",  xaxt = "n", xlab = "", 
+#      lwd = 2, col = "goldenrod", ylim = c(-10, 80),
+#      #main = 
+#      ylab = "Avg Daily Depletion (cfs)")
+# lines(1:12, (avg_mar_ilr-avg_basecase), lty = 2, lwd = 2, col = "goldenrod")
+# # lines(1:12, 0.75*(avg_nvgwmoa-avg_basecase), lty = 2, lwd = 2, col = "goldenrod")
+# # lines(1:12, 0.50*(avg_nvgwmoa-avg_basecase), lty = 3, lwd = 2, col = "goldenrod")
+# axis(side = 1, at = 1:12, labels = month.abb[1:12])
+# grid()
+# # legend(x = "bottomright", lty = c(2,1), legend = c("Total Depletion", "50% Reversed Depletion MT"))
+# abline(h=0, lwd=2, col = "darkgray")
+# 
+# 
+# plot(1:12, wet_nvgwmoa-wet_basecase, lwd = 2, col = "dodgerblue",
+#      ylim = c(-10, 80), type = "l", xaxt = "n", xlab = "",
+#      ylab = "Avg Daily Depletion (cfs)")
+# lines(1:12, (wet_mar_ilr-wet_basecase), lty = 2, lwd = 2, col = "dodgerblue")
+# # lines(1:12, 0.75*(wet_nvgwmoa-wet_basecase), lty = 2, lwd = 2, col = "dodgerblue")
+# # lines(1:12, 0.50*(wet_nvgwmoa-wet_basecase), lty = 1, lwd = 2, col = "dodgerblue")
+# axis(side = 1, at = 1:12, labels = month.abb[1:12])
+# grid()
+# # legend(x = "bottomright", lty = c(2,1), legend = c("Total Depletion", "50% Reversed Depletion MT"))
+# abline(h=0, lwd=2, col = "darkgray")
+# 
+# dev.off()
+
+
+
+
 # scratchwork -------------------------------------------------------------
 
 
-dry_basecase = Flow_SP_Dry_Avg_Wet$basecase_cfs[Flow_SP_Dry_Avg_Wet$Year_Type == "Dry (2014)"]
-dry_nvgwmoa = Flow_SP_Dry_Avg_Wet$nvgwmoa_cfs[Flow_SP_Dry_Avg_Wet$Year_Type == "Dry (2014)"]
-dry_mar_ilr = Flow_SP_Dry_Avg_Wet$MAR_ILR_cfs[Flow_SP_Dry_Avg_Wet$Year_Type == "Dry (2014)"]
-avg_basecase = Flow_SP_Dry_Avg_Wet$basecase_cfs[Flow_SP_Dry_Avg_Wet$Year_Type == "Average (2010)"]
-avg_nvgwmoa = Flow_SP_Dry_Avg_Wet$nvgwmoa_cfs[Flow_SP_Dry_Avg_Wet$Year_Type == "Average (2010)"]
-avg_mar_ilr = Flow_SP_Dry_Avg_Wet$MAR_ILR_cfs[Flow_SP_Dry_Avg_Wet$Year_Type == "Average (2010)"]
-wet_basecase = Flow_SP_Dry_Avg_Wet$basecase_cfs[Flow_SP_Dry_Avg_Wet$Year_Type == "Wet (2017)"]
-wet_nvgwmoa = Flow_SP_Dry_Avg_Wet$nvgwmoa_cfs[Flow_SP_Dry_Avg_Wet$Year_Type == "Wet (2017)"]
-wet_mar_ilr = Flow_SP_Dry_Avg_Wet$MAR_ILR_cfs[Flow_SP_Dry_Avg_Wet$Year_Type == "Wet (2017)"]
-
-png(filename = "MT mar_ilr 2.png", width = 8.9, height = 6.1, units = "in", res = 300)
-
-par(mfrow = c(2,2))
-
-mar=c(5,4,4,2)
-plot(dry_basecase, type = "l", lty = 1, log = "y", xaxt = "n",
-     main = "FJ Streamflow, NV-GWM-OA and Basecase", xlab = "Month",
-     col = "red", ylim = c(1, 2600), ylab = "Avg Daily Streamflow (cfs)")
-lines(dry_nvgwmoa, lty = 2, col = "red")
-lines(dry_mar_ilr, lty = 3, col = "red")
-lines(avg_basecase, lty = 1, col = "goldenrod")
-lines(avg_nvgwmoa, lty = 2, col = "goldenrod")
-lines(avg_mar_ilr, lty = 3, col = "goldenrod")
-lines(wet_basecase, lty = 1, col = "dodgerblue")
-lines(wet_nvgwmoa, lty = 2, col = "dodgerblue")
-lines(wet_mar_ilr, lty = 3, col = "dodgerblue")
-axis(side = 1, at = 1:12, labels = month.abb[1:12])
-grid()
-legend(x = "bottomleft" , lty = c(1,2,3), legend = c("Basecase", "NV-GWM-OA", "MAR+ILR"))
-
-dmi_diff = dry_mar_ilr-dry_basecase; dmi_diff[dmi_diff <0]=0 
-dnv_diff = dry_nvgwmoa-dry_basecase; dnv_diff[dnv_diff<0]=0 
-round(dmi_diff/dnv_diff*100)
-
-ami_diff = avg_mar_ilr-avg_basecase; ami_diff[ami_diff <0]=0 
-anv_diff = avg_nvgwmoa-avg_basecase; anv_diff[anv_diff<0]=0 
-round(ami_diff/anv_diff*100)
-
-wmi_diff = wet_mar_ilr-wet_basecase; wmi_diff[wmi_diff <0]=0 
-wnv_diff = wet_nvgwmoa-wet_basecase; wnv_diff[wnv_diff<0]=0 
-round(wmi_diff/wnv_diff*100)
-
-round((dry_mar_ilr-dry_basecase) / (dry_nvgwmoa-dry_basecase) * 100 )
-round((avg_mar_ilr-avg_basecase) / (avg_nvgwmoa-avg_basecase) * 100 )
-round((wet_mar_ilr-dry_basecase) / (wet_nvgwmoa-dry_basecase) * 100 )
-
-
-# Schematic MT setting
-
-mar=c(3,3,2,2)
-plot(1:12, dry_nvgwmoa-dry_basecase, type = "l", #log = "y", 
-     col = "red", lwd = 2, lty = 1, ylim = c(-10, 80), xaxt = "n", xlab = "",
-     # main = "Total Stream Depletion, NVGWMOA - Basecase",
-     ylab = "Avg Daily Depletion (cfs)")
-lines(1:12, 0.75*(dry_nvgwmoa-dry_basecase), lty = 2, lwd = 2, col = "red")
-lines(1:12, 0.50*(dry_nvgwmoa-dry_basecase), lty = 3, lwd = 2, col = "red")
-axis(side = 1, at = 1:12, labels = month.abb[1:12])
-grid()
- legend(x = "topleft", lty = c(1,2,3), legend = c("Total Depletion", "75% Reversed Depletion MT","50% Reversed Depletion MT"))
-abline(h=0, lwd=2, col = "darkgray")
-
-plot(1:12, avg_nvgwmoa-avg_basecase, type = "l",  xaxt = "n", xlab = "", 
-     lwd = 2, col = "goldenrod", ylim = c(-10, 80),
-     #main = 
-     ylab = "Avg Daily Depletion (cfs)")
-lines(1:12, 0.75*(avg_nvgwmoa-avg_basecase), lty = 2, lwd = 2, col = "goldenrod")
-lines(1:12, 0.50*(avg_nvgwmoa-avg_basecase), lty = 3, lwd = 2, col = "goldenrod")
-axis(side = 1, at = 1:12, labels = month.abb[1:12])
-grid()
-# legend(x = "bottomright", lty = c(2,1), legend = c("Total Depletion", "50% Reversed Depletion MT"))
-abline(h=0, lwd=2, col = "darkgray")
-
-
-plot(1:12, wet_nvgwmoa-wet_basecase, lwd = 2, col = "dodgerblue",
-     ylim = c(-10, 80), type = "l", xaxt = "n", xlab = "",
-     ylab = "Avg Daily Depletion (cfs)")
-lines(1:12, 0.75*(wet_nvgwmoa-wet_basecase), lty = 2, lwd = 2, col = "dodgerblue")
-lines(1:12, 0.50*(wet_nvgwmoa-wet_basecase), lty = 3, lwd = 2, col = "dodgerblue")
-axis(side = 1, at = 1:12, labels = month.abb[1:12])
-grid()
-# legend(x = "bottomright", lty = c(2,1), legend = c("Total Depletion", "50% Reversed Depletion MT"))
-abline(h=0, lwd=2, col = "darkgray")
-
-dev.off()
-
-
-
-# Example MT setting - MAR + ILR scenario
-
-png(filename = "MT mar_ilr 3.png", width = 8.9, height = 6.1, units = "in", res = 300)
-
-mar=c(3,3,2,2)
-plot(1:12, dry_nvgwmoa-dry_basecase, type = "l", #log = "y", 
-     col = "red", lwd = 2, lty = 1, ylim = c(-10, 80), xaxt = "n", xlab = "",
-     # main = "Total Stream Depletion, NVGWMOA - Basecase",
-     ylab = "Avg Daily Depletion (cfs)")
-lines(1:12, (dry_mar_ilr-dry_basecase), lty = 2, lwd = 2, col = "red")
-# lines(1:12, 0.75*(dry_mar_ilr-dry_basecase), lty = 2, lwd = 2, col = "red")
-# lines(1:12, 0.50*(dry_nvgwmoa-dry_basecase), lty = 3, lwd = 2, col = "red")
-axis(side = 1, at = 1:12, labels = month.abb[1:12])
-grid()
-legend(x = "topleft", lty = c(1,2,3), legend = c("Total Depletion", "MAR+ILR Depletion"))
-# legend(x = "topleft", lty = c(1,2,3), legend = c("Total Depletion", "25% Reversed Depletion MT","50% Reversed Depletion MT"))
-abline(h=0, lwd=2, col = "darkgray")
-
-plot(1:12, avg_nvgwmoa-avg_basecase, type = "l",  xaxt = "n", xlab = "", 
-     lwd = 2, col = "goldenrod", ylim = c(-10, 80),
-     #main = 
-     ylab = "Avg Daily Depletion (cfs)")
-lines(1:12, (avg_mar_ilr-avg_basecase), lty = 2, lwd = 2, col = "goldenrod")
-# lines(1:12, 0.75*(avg_nvgwmoa-avg_basecase), lty = 2, lwd = 2, col = "goldenrod")
-# lines(1:12, 0.50*(avg_nvgwmoa-avg_basecase), lty = 3, lwd = 2, col = "goldenrod")
-axis(side = 1, at = 1:12, labels = month.abb[1:12])
-grid()
-# legend(x = "bottomright", lty = c(2,1), legend = c("Total Depletion", "50% Reversed Depletion MT"))
-abline(h=0, lwd=2, col = "darkgray")
-
-
-plot(1:12, wet_nvgwmoa-wet_basecase, lwd = 2, col = "dodgerblue",
-     ylim = c(-10, 80), type = "l", xaxt = "n", xlab = "",
-     ylab = "Avg Daily Depletion (cfs)")
-lines(1:12, (wet_mar_ilr-wet_basecase), lty = 2, lwd = 2, col = "dodgerblue")
-# lines(1:12, 0.75*(wet_nvgwmoa-wet_basecase), lty = 2, lwd = 2, col = "dodgerblue")
-# lines(1:12, 0.50*(wet_nvgwmoa-wet_basecase), lty = 1, lwd = 2, col = "dodgerblue")
-axis(side = 1, at = 1:12, labels = month.abb[1:12])
-grid()
-# legend(x = "bottomright", lty = c(2,1), legend = c("Total Depletion", "50% Reversed Depletion MT"))
-abline(h=0, lwd=2, col = "darkgray")
-
-dev.off()
 
 # plot(1:12, dry_nvgwmoa-dry_basecase, type = "l", #log = "y", 
 #      col = "red", lwd = 2, lty = 3, ylim = c(-30, 80), 
@@ -2160,6 +2182,12 @@ dev.off()
 # lines(1:12, 0.5*(dry_nvgwmoa-dry_basecase), lty = 4, lwd = 2, col = "red")
 # lines(1:12, 0.5*(avg_nvgwmoa-avg_basecase), lty = 4, lwd = 2, col = "goldenrod")
 # lines(1:12, 0.5*(wet_nvgwmoa-wet_basecase), lty = 4, lwd = 2, col = "dodgerblue")
+
+
+
+
+
+
 
 # if (COMPARE_MAR==TRUE){
 #   Inflow_MAR = readLines('SVIHM_MAR.sfr')
@@ -2200,84 +2228,80 @@ dev.off()
 
 
 
-#############################################################################################
-########################             MODFLOW INPUT PLOTS             ########################
-#############################################################################################
-
-MODFLOW_Seg1_Inflows_diff_melt = reshape2::melt(MODFLOW_Seg1_Inflows %>%
-                                                  select('Date','MAR_diff','ILR_diff','MAR_ILR_diff'),id.vars = 'Date')
-
-(Seg1_Inflow_diff_Plot = ggplot(data = MODFLOW_Seg1_Inflows_diff_melt, aes(x = Date, y = value*0.000408734569, group = variable, color = variable)) +
-    geom_line() +
-    geom_point() +
-    scale_x_date(limits = c(start_date,
-                            as.Date('1995-11-01')),
-                 breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
-                 date_labels = ('%b-%y'))
-)
-MODFLOW_Seg32_Inflows_diff_melt = melt(MODFLOW_Seg32_Inflows%>%select('Date','MAR_diff','ILR_diff','MAR_ILR_diff'),id.vars = 'Date')
-(Seg32_Inflow_diff_Plot = ggplot(data = MODFLOW_Seg32_Inflows_diff_melt, aes(x = Date, y = value*0.000408734569, group = variable, color = variable)) +
-    geom_line() +
-    geom_point() +
-    scale_x_date(limits = c(start_date,
-                            end_date),
-                 breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
-                 date_labels = ('%b-%y'))
-)
-
-
-#############################################################################################
-########################            DAILY DIFFERENCE PLOTS           ########################
-#############################################################################################
-(MAR_Daily_Diff_Plot = ggplot(Flow_Diff_Daily, aes(x = Date, y = MAR_difference_cfs)) +
-   geom_line() +
-   #geom_line(data =MODFLOW_Seg1_Inflows, aes(x = Date, y = Basecase*0.000408734569/10), color = 'red') +
-   geom_hline(yintercept = 0) +
-   #scale_y_continuous(limits = c(-50,50), breaks = seq(-50,50,by = 10), expand = c(0,0)) +
-   scale_x_date(limits = c(start_date,
-                           end_date),
-                breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
-                date_labels = ('%b-%y')) +
-   theme(panel.background = element_blank(),
-         panel.border = element_rect(fill=NA, color = 'black'),
-         axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-         axis.text.y = element_text(size = 8),
-         axis.ticks = element_line(size = 0.2),
-         plot.title = element_text(hjust = 0.5, size = 10),
-         axis.title.x = element_blank(),
-         axis.title.y = element_text(size = 8))
-)
-(ILR_Daily_Diff_Plot = ggplot(Flow_Diff_Daily, aes(x = Date, y = ILR_difference_cfs)) +
-    geom_line() +
-    geom_hline(yintercept = 0) +
-    scale_y_continuous(limits = c(-90,90), breaks = seq(-90,90,by = 30), expand = c(0,0)) +
-    scale_x_date(limits = c(start_date,
-                            end_date),
-                 breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
-                 date_labels = ('%b-%y')) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8))
-)
-(MAR_ILR_Daily_Diff_Plot = ggplot(Flow_Diff_Daily, aes(x = Date, y = MAR_ILR_difference_cfs)) +
-    geom_line() +
-    geom_hline(yintercept = 0) +
-    scale_y_continuous(limits = c(-100,100), breaks = seq(-100,100,by = 25), expand = c(0,0)) +
-    scale_x_date(limits = c(start_date,
-                            end_date),
-                 breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
-                 date_labels = ('%b-%y')) +
-    theme(panel.background = element_blank(),
-          panel.border = element_rect(fill=NA, color = 'black'),
-          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.ticks = element_line(size = 0.2),
-          plot.title = element_text(hjust = 0.5, size = 10),
-          axis.title.x = element_blank(),
-          axis.title.y = element_text(size = 8))
-)
+# ########################             MODFLOW INPUT PLOTS             ########################
+# 
+# MODFLOW_Seg1_Inflows_diff_melt = reshape2::melt(MODFLOW_Seg1_Inflows %>%
+#                                                   select('Date','MAR_diff','ILR_diff','MAR_ILR_diff'),id.vars = 'Date')
+# 
+# (Seg1_Inflow_diff_Plot = ggplot(data = MODFLOW_Seg1_Inflows_diff_melt, aes(x = Date, y = value*0.000408734569, group = variable, color = variable)) +
+#     geom_line() +
+#     geom_point() +
+#     scale_x_date(limits = c(start_date,
+#                             as.Date('1995-11-01')),
+#                  breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
+#                  date_labels = ('%b-%y'))
+# )
+# MODFLOW_Seg32_Inflows_diff_melt = melt(MODFLOW_Seg32_Inflows%>%select('Date','MAR_diff','ILR_diff','MAR_ILR_diff'),id.vars = 'Date')
+# (Seg32_Inflow_diff_Plot = ggplot(data = MODFLOW_Seg32_Inflows_diff_melt, aes(x = Date, y = value*0.000408734569, group = variable, color = variable)) +
+#     geom_line() +
+#     geom_point() +
+#     scale_x_date(limits = c(start_date,
+#                             end_date),
+#                  breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
+#                  date_labels = ('%b-%y'))
+# )
+# 
+# 
+# ########################            DAILY DIFFERENCE PLOTS           ########################
+# (MAR_Daily_Diff_Plot = ggplot(Flow_Diff_Daily, aes(x = Date, y = MAR_difference_cfs)) +
+#    geom_line() +
+#    #geom_line(data =MODFLOW_Seg1_Inflows, aes(x = Date, y = Basecase*0.000408734569/10), color = 'red') +
+#    geom_hline(yintercept = 0) +
+#    #scale_y_continuous(limits = c(-50,50), breaks = seq(-50,50,by = 10), expand = c(0,0)) +
+#    scale_x_date(limits = c(start_date,
+#                            end_date),
+#                 breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
+#                 date_labels = ('%b-%y')) +
+#    theme(panel.background = element_blank(),
+#          panel.border = element_rect(fill=NA, color = 'black'),
+#          axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#          axis.text.y = element_text(size = 8),
+#          axis.ticks = element_line(size = 0.2),
+#          plot.title = element_text(hjust = 0.5, size = 10),
+#          axis.title.x = element_blank(),
+#          axis.title.y = element_text(size = 8))
+# )
+# (ILR_Daily_Diff_Plot = ggplot(Flow_Diff_Daily, aes(x = Date, y = ILR_difference_cfs)) +
+#     geom_line() +
+#     geom_hline(yintercept = 0) +
+#     scale_y_continuous(limits = c(-90,90), breaks = seq(-90,90,by = 30), expand = c(0,0)) +
+#     scale_x_date(limits = c(start_date,
+#                             end_date),
+#                  breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
+#                  date_labels = ('%b-%y')) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8))
+# )
+# (MAR_ILR_Daily_Diff_Plot = ggplot(Flow_Diff_Daily, aes(x = Date, y = MAR_ILR_difference_cfs)) +
+#     geom_line() +
+#     geom_hline(yintercept = 0) +
+#     scale_y_continuous(limits = c(-100,100), breaks = seq(-100,100,by = 25), expand = c(0,0)) +
+#     scale_x_date(limits = c(start_date,
+#                             end_date),
+#                  breaks = seq(start_date, by = "2 years", length.out = 22), expand = c(0,0),
+#                  date_labels = ('%b-%y')) +
+#     theme(panel.background = element_blank(),
+#           panel.border = element_rect(fill=NA, color = 'black'),
+#           axis.text.x = element_text(angle = 45, hjust = 1, vjust= 0.7, size = 8),
+#           axis.text.y = element_text(size = 8),
+#           axis.ticks = element_line(size = 0.2),
+#           plot.title = element_text(hjust = 0.5, size = 10),
+#           axis.title.x = element_blank(),
+#           axis.title.y = element_text(size = 8))
+# )
