@@ -24,7 +24,7 @@ flow_scenario = "Basecase" # Can be Basecase/Flow_Lims/FlowLimsMAR. Flow limits 
 
 # Irrigation demand: Different from the kc_CROP_mult values in crop_coeff_mult.txt, which is used for calibrating.
 irr_demand_mult = 1 # Can be 1 (Basecase) or < 1 or > 1 (i.e., reduced or increased irrigation; assumes land use change)
-natveg_kc = 0.6 # Default: 0.6. Set at 1.0 for major natveg scenarios. 
+# set nat veg kc under Land Use Scenario.
 
 # Month and day of the final day of alfalfa irrigation season. 
 # Default is Aug 31, 8/31
@@ -51,17 +51,22 @@ irr_eff_scenario = "Basecase" # Basecase, or set irr efficiency increase or decr
 
 #Land use scenario. 
 landuse_scenario ="major_natveg" # Default: Basecase. For attribution study: major_natveg
+if(landuse_scenario=="major_natveg"){ # Default: 0.6. Set at 1.0 for major natveg scenarios. 
+  natveg_kc = 1.0
+} else if(landuse_scenario=="basecase"){
+  natveg_kc = 0.6
+} 
 # landuse_scenario_detail = "native veg, gw and mixed fields, outside adj"
 # landuse_scenario_detail = "native veg outside adj"
 # landuse_scenario_detail = "native veg, gw and mixed fields, inside adj"
 # landuse_scenario_detail = "native veg inside adj"
 # landuse_scenario_detail = "native veg, gw and mixed fields, all cultivated fields"
-# landuse_scenario_detail = "native veg all cultivated fields"
+landuse_scenario_detail = "native veg all cultivated fields"
 
 
 
 # Overall scenario identifier. Also makes the directory name; must match folder
-scenario_name = "basecase"
+# scenario_name = "basecase"
 # scenario_name = "mar_ilr" # "ilr" "mar"
 # scenario_name = "mar_ilr_max_0.019" # Options: 0.035, 0.003, or 0.019 (the arithmetic mean) or 0.01 (the geometric mean)
 # scenario_name = "mar_ilr_flowlims"#"flowlims"
@@ -76,6 +81,7 @@ scenario_name = "basecase"
 # scenario_name = "natveg_inside_adj"
 # scenario_name = "natveg_gwmixed_inside_adj"
 # scenario_name = "natveg_all"
+scenario_name = "natveg_all_et_check"
 # scenario_name = "natveg_gwmixed_all"
 # scenario_name = "reservoir_shackleford" # "reservoir_etna" "reservoir_sfork" "reservoir_shackleford"
 # scenario_name = "reservoir_pipeline_etna"
@@ -247,6 +253,8 @@ if( !(landuse_scenario %in% c("basecase","Basecase"))){
   # read in datasets
   poly = readOGR(dsn = ref_data_dir, layer = "Landuse_20190219")
   # adj = get_postgis_query(siskiyou_spatial, "SELECT * FROM scott_adjudicated_area", geom_name = "geom")
+  # three_basins = get_postgis_query(siskiyou_spatial, "SELECT * FROM three_basin_boundaries_2018", geom_name = "geom")
+  # basin = three_basins[three_basins$Basin_Name == "SCOTT RIVER VALLEY",]
   # writeOGR(adj, dsn = ref_data_dir, layer = "Adjudicated Area",driver = "ESRI Shapefile")
   adj = readOGR(dsn = ref_data_dir, layer = "Adjudicated Area")
   
@@ -422,14 +430,14 @@ if( !(landuse_scenario %in% c("basecase","Basecase"))){
                      descrip = lu_descrip,
                      color = lu_color)
   #match codes and colors
-  poly$landuse_from_svihm = poly_tab$Landuse[match(poly$Polynmbr, poly_tab$Field_ID)]
-  poly$landuse_color = lu_df$color[match(poly$landuse_from_svihm, lu_df$lu_code)]
-  # 
+  # poly$landuse_from_svihm = poly_tab$Landuse[match(poly$Polynmbr, poly_tab$Field_ID)]
+  # poly$landuse_color = lu_df$color[match(poly$landuse_from_svihm, lu_df$lu_code)]
+  #
   # # #plot
   # png(filename = "parcels_landuse_basecase.png", height=9.5, width = 6.2, units = "in", res = 300)
   # plot(basin, lwd = 2, main = "Land Use / Crop Type: Basecase")
   # plot(poly, add=T, col = poly$landuse_color, border = "darkgray", lwd=0.5)
-  # legend(x = "bottomleft", 
+  # legend(x = "bottomleft",
   #        legend = c(lu_df$descrip[1:2],"ET, No Irr. (Native Veg.)",
   #                   "No ET, No Irr. (e.g. Tailings)","Water"),
   #        col = lu_df$color, pch = rep(15,6))
@@ -514,15 +522,15 @@ if( !(landuse_scenario %in% c("basecase","Basecase"))){
   # #match codes and colors
   # poly$landuse_from_svihm = poly_tab_amended$Landuse[match(poly$Polynmbr, poly_tab_amended$Field_ID)]
   # poly$landuse_color = lu_df$color[match(poly$landuse_from_svihm, lu_df$lu_code)]
-  # 
-  # 
+  # # 
+  # # 
   # plot(basin, lwd = 2, main = "Land Use / Crop Type: NV GWM OA")
   # plot(poly, add=T, col = poly$landuse_color,
   #      border = "darkgray", lwd=0.5)
-  # legend(x = "bottomleft", 
+  # legend(x = "bottomleft",
   #        legend = c(lu_df$descrip[1:2],"ET, No Irr. (Native Veg.)",
   #                   "No ET, No Irr. (e.g. Tailings)","Water"),
-  #        col = lu_df$color, pch = rep(15,6))  
+  #        col = lu_df$color, pch = rep(15,6))
   # # plot(adj, add=T, col= rgb(0.5,0.5,0.5,0.5))
   # dev.off()
   
@@ -541,6 +549,8 @@ if( !(landuse_scenario %in% c("basecase","Basecase"))){
 
   # # Read in shapefile for precise outline of model domain
   # domain = readOGR(dsn = ref_data_dir, layer = "Model_Domain_20180222")
+  # legacy_dir = "C:/Users/Claire/Box/Scott_Only/Legacy Work Products/Scott_Legacy_GIS"
+  # domain = readOGR(dsn = legacy_dir, layer = "Model_Domain_20180222")
   
   # Read in Discharge Zone Cells 
   dz_cells = as.matrix(read.table(file.path(ref_data_dir,"Discharge_Zone_Cells.txt"),header=F))
@@ -581,7 +591,7 @@ if( !(landuse_scenario %in% c("basecase","Basecase"))){
   # Make extinction depth matrix
   extinction_depth = dz_cells
   # Assign cells in natural vegetation fields a 4.5 m extinction depth
-  extinction_depth[poly_cells %in% unique(poly_nv$Polynmbr)] = 4.5
+  extinction_depth[poly_cells %in% unique(poly_nv$Field_ID)] = 4.5
   # Assign Discharge Zone cells an extinction depth of 0.5 m
   extinction_depth[dz_cells == 1] = 0.5
   
@@ -593,6 +603,11 @@ if( !(landuse_scenario %in% c("basecase","Basecase"))){
   write.table(x =extinction_depth, 
               file = file.path(SWBM_file_dir, "ET_Cells_Extinction_Depth.txt"),
               row.names = F, col.names = F)
+  #Overwrite ET_Zone_Cells.txt with new ET_Zone_Cells
+  write.table(x =et_Zone_cells, 
+              file = file.path(SWBM_file_dir, "ET_Zone_Cells.txt"),
+              row.names = F, col.names = F, overwrite=T)
+  
   
 } else if(landuse_scenario %in% c("basecase","Basecase")){
     # If the land use is basecase, keep the standard polygon file, and 
@@ -611,11 +626,6 @@ if( !(landuse_scenario %in% c("basecase","Basecase"))){
   }
 
 
-
-# TO DO: Calculate cells that are nat veg and need to get the 15-foot extinction depth
-
-
-# Write file as NatVeg_Outside_DZ_Cells.txt
 
 #  general_inputs.txt ------------------------------------------------
 
