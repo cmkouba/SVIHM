@@ -50,9 +50,11 @@ if(tolower(BDAs_scenario) != "basecase"){ stream_bed_elev_increase = 0.5} # set 
 irr_eff_scenario = "Basecase" # Basecase, or set irr efficiency increase or decrease amount (not applied to flood irrigation)
 
 #Land use scenario. 
-landuse_scenario ="major_natveg" # Default: Basecase. For attribution study: major_natveg
+landuse_scenario ="major_natveg" # Default: basecase. For attribution study: major_natveg
 if(landuse_scenario=="major_natveg"){ # Default: 0.6. Set at 1.0 for major natveg scenarios. 
-  natveg_kc = 1.0
+  natveg_kc = 0.6
+  # natveg_kc = 1.0
+  extinction_depth = 10 # 4.5 # extinction depth outside the discharge zone
 } else if(landuse_scenario=="basecase"){
   natveg_kc = 0.6
 } 
@@ -77,11 +79,12 @@ landuse_scenario_detail = "native veg all cultivated fields"
 # scenario_name = "alf_irr_stop_aug15"
 # scenario_name = "alf_irr_stop_aug15_dry_yrs_only"
 # scenario_name = "natveg_outside_adj"
+scenario_name = "natveg_all_et_check_0.6nvkc_10m_ext"
 # scenario_name = "natveg_gwmixed_outside_adj"
 # scenario_name = "natveg_inside_adj"
 # scenario_name = "natveg_gwmixed_inside_adj"
 # scenario_name = "natveg_all"
-scenario_name = "natveg_all_et_check"
+# scenario_name = "natveg_all_et_check_0.6nvkc"
 # scenario_name = "natveg_gwmixed_all"
 # scenario_name = "reservoir_shackleford" # "reservoir_etna" "reservoir_sfork" "reservoir_shackleford"
 # scenario_name = "reservoir_pipeline_etna"
@@ -591,7 +594,7 @@ if( !(landuse_scenario %in% c("basecase","Basecase"))){
   # Make extinction depth matrix
   extinction_depth = dz_cells
   # Assign cells in natural vegetation fields a 4.5 m extinction depth
-  extinction_depth[poly_cells %in% unique(poly_nv$Field_ID)] = 4.5
+  extinction_depth[poly_cells %in% unique(poly_nv$Field_ID)] = extinction_depth
   # Assign Discharge Zone cells an extinction depth of 0.5 m
   extinction_depth[dz_cells == 1] = 0.5
   
@@ -604,9 +607,10 @@ if( !(landuse_scenario %in% c("basecase","Basecase"))){
               file = file.path(SWBM_file_dir, "ET_Cells_Extinction_Depth.txt"),
               row.names = F, col.names = F)
   #Overwrite ET_Zone_Cells.txt with new ET_Zone_Cells
-  write.table(x =et_Zone_cells, 
+  file.remove(file = file.path(SWBM_file_dir, "ET_Zone_Cells.txt"))
+  write.table(x =et_zone_cells, 
               file = file.path(SWBM_file_dir, "ET_Zone_Cells.txt"),
-              row.names = F, col.names = F, overwrite=T)
+              row.names = F, col.names = F)
   
   
 } else if(landuse_scenario %in% c("basecase","Basecase")){
@@ -1373,11 +1377,8 @@ for (i in 1:num_stress_periods){
   write("     DZ                         ", file = 'SVIHM.drn', append = T)
 }
 
+
 # Currently spits out an extra space for each line after the first in the DZ definition. does this matter??
-
-
-# Now working here: get the fkn wl data from somewhere so you can make a hob file and run the modflow hist model
-
 
 
 # SVIHM.ets ---------------------------------------------------------------
@@ -1404,8 +1405,17 @@ for (i in 1:num_stress_periods){
 ### TO DO: Join additional wells to the model grid and add their well loc. info to reference hob_info table.
 
 ### 1) Get a cleaned water level dataframe
+# To do: make this contingent on if the connect_to_db worked
 wl = data.frame(tbl(siskiyou_tables, "wl_observations"))
 stations = data.frame(tbl(siskiyou_tables, "wl_data_wells"))
+#else 
+# load spatial and tabular data
+# gsp_dir = "~/GitHub/SiskiyouGSP2022"
+# fig_dir = file.path(gsp_dir, "GSP_Figures")
+# local_layers_path = file.path(fig_dir, "scott_figure_layers.RData")
+# source(file.path(fig_dir,"Scott_load_environment.R"))
+# wl = wl_obs
+# stations = wells
 
 #merge SWN (long well names) onto wl obs table.
 stations_swn = stations[,c('well_code', 'swn')]
