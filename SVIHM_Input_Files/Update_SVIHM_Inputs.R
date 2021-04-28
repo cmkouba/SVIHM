@@ -38,7 +38,7 @@ if(alf_irr_stop_mo<9){alf_irr_stop_mo = alf_irr_stop_mo + 3
 # Reservoir scenario
 reservoir_scenario = "Basecase"#"French"#"Shackleford" #"Basecase" #"Shackleford","French", "Etna", "South_Fork"
 reservoir_plus_pipeline = FALSE    # set pipeline status
-reservoir_capacity =  "Basecase" #119.01 * 150 * 7.5 # Basecase or,  59.504 or 119.01 (30 or 60 cfs/day in AF) * 150 (days of dry season) * n years
+reservoir_capacity =   "Basecase" #59.504 * 150 * 7.5 # Basecase or,  59.504 or 119.01 (30 or 60 cfs/day in AF) * 150 (days of dry season) * n years
 reservoir_start = "empty" # "empty" "full" or a fraction of capacity, or a number of AF
 dry_season_release_cfs = 30 # typically 30 or 60 cfs
 
@@ -54,7 +54,7 @@ landuse_scenario ="major_natveg" # Default: basecase. For attribution study: maj
 if(landuse_scenario=="major_natveg"){ # Default: 0.6. Set at 1.0 for major natveg scenarios. 
   natveg_kc = 0.6
   # natveg_kc = 1.0
-  extinction_depth = 10 # 4.5 # extinction depth outside the discharge zone
+  extinction_depth_value = 10 # 4.5 # extinction depth outside the discharge zone
 } else if(landuse_scenario=="basecase"){
   natveg_kc = 0.6
 } 
@@ -592,18 +592,18 @@ if( !(landuse_scenario %in% c("basecase","Basecase"))){
   poly_cells = as.matrix(read.table(file = file.path(time_indep_dir, "Recharge_Zones_SVIHM.txt"),
                                     header = F))
   # Make extinction depth matrix
-  extinction_depth = dz_cells
+  extinction_depth_matrix = dz_cells
   # Assign cells in natural vegetation fields a 4.5 m extinction depth
-  extinction_depth[poly_cells %in% unique(poly_nv$Field_ID)] = extinction_depth
+  extinction_depth_matrix[poly_cells %in% unique(poly_nv$Field_ID)] = extinction_depth_value
   # Assign Discharge Zone cells an extinction depth of 0.5 m
-  extinction_depth[dz_cells == 1] = 0.5
+  extinction_depth_matrix[dz_cells == 1] = 0.5
   
   #Make a table of 1s and 0s, 1 indicating ET-from-gw is active in this cell
-  et_zone_cells = extinction_depth
-  et_zone_cells[extinction_depth!=0]=1
+  et_zone_cells = extinction_depth_matrix
+  et_zone_cells[extinction_depth_matrix!=0]=1
   
   # Save  extinction depth matrix
-  write.table(x =extinction_depth, 
+  write.table(x =extinction_depth_matrix, 
               file = file.path(SWBM_file_dir, "ET_Cells_Extinction_Depth.txt"),
               row.names = F, col.names = F)
   #Overwrite ET_Zone_Cells.txt with new ET_Zone_Cells
@@ -1153,9 +1153,9 @@ if(reservoir_scenario %in% c("Basecase","basecase","BASECASE")){
   reliability = met_demand / dry_months
   
   # Plot inflow, discharge, and storage
-  # plot(model_months, Q/num_days/cfs_to_AFday, type = "l", ylab = "Inflow, cfs")
-  # plot(model_months, R/num_days/cfs_to_AFday, type = "l", ylab = "Stream Discharge, cfs")
-  # plot(model_months, P/num_days/cfs_to_AFday, type = "l", ylab = "Pipeline Discharge, cfs")
+  plot(model_months, Q/num_days/cfs_to_AFday, type = "l", ylab = "Inflow, cfs")
+  plot(model_months, R/num_days/cfs_to_AFday, type = "l", ylab = "Stream Discharge, cfs")
+  plot(model_months, P/num_days/cfs_to_AFday, type = "l", ylab = "Pipeline Discharge, cfs")
   plot(model_months, S, type = "l", ylab = "Storage, AF", ylim = c(0,K), main = paste(reservoir_scenario, cfs_goal, "cfs demand, ",round(K)," AF"))
   
   # notes
