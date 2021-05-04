@@ -50,7 +50,7 @@ if(tolower(BDAs_scenario) != "basecase"){ stream_bed_elev_increase = 0.5} # set 
 irr_eff_scenario = "Basecase" # Basecase, or set irr efficiency increase or decrease amount (not applied to flood irrigation)
 
 #Land use scenario. 
-landuse_scenario ="bsasecase" # Default: basecase. For attribution study: major_natveg
+landuse_scenario ="basecase" # Default: basecase. For attribution study: major_natveg
 if(landuse_scenario=="major_natveg"){ # Default: 0.6. Set at 1.0 for major natveg scenarios. 
   # natveg_kc = 0.6
   natveg_kc = 1.0
