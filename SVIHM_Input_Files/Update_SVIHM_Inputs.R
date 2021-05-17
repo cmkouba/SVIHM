@@ -242,7 +242,7 @@ write.table(drains_vector, file = file.path(SWBM_file_dir, "Drains_initial_m3day
             sep = " ", quote = FALSE, col.names = FALSE, row.names = FALSE)
 
 
-# ET_Cells_extinction_depth.txt,  polygons_table.txt ------------------------------------------------------------
+# ET_Cells_extinction_depth.txt, polygons_table.txt, and SVIHM.zon ------------------------------------------------------------
 
 if( !(landuse_scenario %in% c("basecase","Basecase"))){ 
   #If landuse is not basecase, amend polygons table
@@ -637,6 +637,13 @@ if( !(landuse_scenario %in% c("basecase","Basecase"))){
               row.names = F, col.names = F)
   }
 
+#___SVIHM.zon -------------------------------------
+
+# Intersect raster grid with adjudicated zone (for Layers 1 and 2)
+# Make new ASCII file SVIHM.zon
+
+zon_line1 = paste(nlayers, nrows, ncols, sep = " ")
+zon_layer_topline = paste0("INTERNAL            (", ncols ,"I2)") # specify zone format
 
 
 #  general_inputs.txt ------------------------------------------------
