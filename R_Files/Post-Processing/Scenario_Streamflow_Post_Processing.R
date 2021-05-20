@@ -22,6 +22,7 @@ library(tidyr)
 # scenario_ids = c("Basecase","irrig_0.8","irrig_0.9")
 # scenario_ids = c("Basecase","alf_ir_stop_jul10")
 
+
 # Scenario ids should correspond to folder names
 if(!exists("scenario_ids")){
   scenario_ids = c("basecase",
@@ -32,9 +33,12 @@ if(!exists("scenario_ids")){
                    "alf_irr_stop_jul10",
                    "alf_irr_stop_aug01","alf_irr_stop_aug01_dry_yrs_only", 
                    "alf_irr_stop_aug15","alf_irr_stop_aug15_dry_yrs_only",
-                   "natveg_outside_adj", "natveg_gwmixed_outside_adj",
-                   "natveg_inside_adj","natveg_gwmixed_inside_adj",
-                   "natveg_all","natveg_gwmixed_all",
+                   "natveg_outside_adj","natveg_outside_adj_dzgwET_only",  
+                   "natveg_gwmixed_outside_adj", "natveg_gwmixed_outside_adj_dzgwET_only", 
+                   "natveg_inside_adj", "natveg_inside_adj_dzgwET_only",
+                   "natveg_gwmixed_inside_adj", "natveg_gwmixed_inside_adj_dzgwET_only",
+                   "natveg_all", "natveg_all_dzgwET_only",
+                   "natveg_gwmixed_all", "natveg_gwmixed_all_dzgwET_only",
                    "reservoir_shackleford", "reservoir_etna",
                    "reservoir_french", "reservoir_sfork",
                    "reservoir_pipeline_etna", "reservoir_pipeline_french",
@@ -60,6 +64,7 @@ graphics_type = 'png'    #output type for graphics, currently pdf or png
 # results_dir = "C:/Users/Claire/Documents/GitHub/SVIHM/R_Files/Post-Processing/Results"
 # setwd(results_dir)
 scenario_dir = "C:/Users/Claire/Documents/GitHub/SVIHM/Scenarios"
+scenario_dir_2 = "D:/SVIHM Scenarios Storage"
 start_date = as.Date("1990-10-01")
 end_date = as.Date("2018-09-30")
 start_wy = 1991
@@ -78,6 +83,10 @@ DP_flows_scenarios = list()
 for(i in 1:length(scenario_ids)){
   scenario_id = scenario_ids[i]
   scenario_filename = file.path(scenario_dir, scenario_id,paste0(flow_loc,".dat"))
+  if(!file.exists(scenario_filename)){
+    scenario_filename = file.path(scenario_dir_2, scenario_id,paste0(flow_loc,".dat"))
+  }
+  
   # print(scenario_filename)
   DP_flow_scenario = data.frame(Date = seq(start_date, end_date, "days"), 
                                 Flow_m3day = read.table(scenario_filename, skip = 2)[,3],

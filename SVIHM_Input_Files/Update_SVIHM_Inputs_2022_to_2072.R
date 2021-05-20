@@ -18,7 +18,7 @@ rm(list = ls())
 # Scenario Selection ------------------------------------------------------
 
 # Future Climate Scenario
-future_climate = "2070DEW" # "basecase", "2030" #"2070CT" "2070DEW" "2070WMW"
+future_climate = "2070WMW" # "basecase", "2030" #"2070CT" "2070DEW" "2070WMW"
 
 
 # Recharge and flow scenarios
@@ -72,7 +72,7 @@ if(landuse_scenario=="major_natveg"){ # Default: 0.6. Set at 1.0 for major natve
 
 
 # Overall scenario identifier. Also makes the directory name; must match folder
-scenario_name = "WY22_71_cf2070DEW" # "WY22_71_cf2070DEW" "WY22_71_cf2070CT" "WY22_71_cf2030" "WY22_71_basecase"
+scenario_name = "WY22_71_cf2070WMW" # "WY22_71_cf2070DEW" "WY22_71_cf2070CT" "WY22_71_cf2030" "WY22_71_basecase"
 # scenario_name = "mar_ilr" # "ilr" "mar"
 # scenario_name = "mar_ilr_max_0.019" # Options: 0.035, 0.003, or 0.019 (the arithmetic mean) or 0.01 (the geometric mean)
 # scenario_name = "mar_ilr_flowlims"#"flowlims"
