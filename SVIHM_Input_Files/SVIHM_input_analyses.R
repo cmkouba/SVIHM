@@ -404,8 +404,8 @@ get_daily_precip_table=function(final_table_start_date=model_start_date,
                                         xs = c("fj", "cal", "gv", "et", "yr", "y2"))
   #Generate daily precip table to make the gap-filled records
   daily_precip_p_record = make_daily_precip(weather_table = noaa,
-                                                              daily_precip_start_date = final_table_start_date, 
-                                                              daily_precip_end_date = final_table_end_date)
+                                            daily_precip_start_date = final_table_start_date, 
+                                            daily_precip_end_date = final_table_end_date)
   p_record = fill_fj_cal_gv_gaps_regression_table(model_coeff=model_coeff, 
                                                station_table = station_table,
                                                daily_precip = daily_precip_p_record,
@@ -416,11 +416,18 @@ get_daily_precip_table=function(final_table_start_date=model_start_date,
   # p_record$interp_cal_fj_gv_mean =  apply(X = dplyr::select(p_record, fj_interp, cal_interp, gv_interp), 
   #                                              MARGIN = 1, FUN = mean, na.rm=T)
   
-  p_record$interp_cal_fj_gv_mean =  apply(X = dplyr::select(p_record, PRCP_mm_fj, PRCP_mm_cal, PRCP_mm_gv), 
+  # p_record$interp_cal_fj_gv_mean =  apply(X = dplyr::select(p_record, PRCP_mm_fj, PRCP_mm_cal, PRCP_mm_gv), 
+  #                                         MARGIN = 1, FUN = mean, na.rm=T)
+  # p_record$interp_cal_fj_mean =  apply(X = dplyr::select(p_record, PRCP_mm_fj, PRCP_mm_cal), 
+  #                                         MARGIN = 1, FUN = mean, na.rm=T)
+  # p_record$interp_cal_gv_mean =  apply(X = dplyr::select(p_record, PRCP_mm_gv, PRCP_mm_cal), 
+  #                                      MARGIN = 1, FUN = mean, na.rm=T)
+  
+  p_record$interp_cal_fj_gv_mean =  apply(X = dplyr::select(p_record, fj_interp, cal_interp, gv_interp), 
                                           MARGIN = 1, FUN = mean, na.rm=T)
-  p_record$interp_cal_fj_mean =  apply(X = dplyr::select(p_record, PRCP_mm_fj, PRCP_mm_cal), 
-                                          MARGIN = 1, FUN = mean, na.rm=T)
-  p_record$interp_cal_gv_mean =  apply(X = dplyr::select(p_record, PRCP_mm_gv, PRCP_mm_cal), 
+  p_record$interp_cal_fj_mean =  apply(X = dplyr::select(p_record,fj_interp, cal_interp), 
+                                       MARGIN = 1, FUN = mean, na.rm=T)
+  p_record$interp_cal_gv_mean =  apply(X = dplyr::select(p_record, gv_interp, cal_interp,), 
                                        MARGIN = 1, FUN = mean, na.rm=T)
   
   # Prepare to combine original precip and new regressed gap-filled fj-cal average
@@ -446,8 +453,8 @@ get_daily_precip_table=function(final_table_start_date=model_start_date,
 }
 
 #Test run for AGU figures, 2019:
-# p_record_all_fj = get_daily_precip_table(final_table_start_date = as.Date("1935-10-01"), 
-#                               final_table_end_date = as.Date("2018-09-30"))
+# p_record_all_fj = get_daily_precip_table(final_table_start_date = as.Date("1935-10-01"),
+#                               final_table_end_date = as.Date("2020-09-30"))
 # wy_annual_totals = aggregate(p_record_all_fj$fj_interp, by=list(p_record_all_fj$water_year), FUN="sum")
 # wyat=wy_annual_totals
 # colnames(wyat)=c("wy", "PRCP_mm")
@@ -455,7 +462,7 @@ get_daily_precip_table=function(final_table_start_date=model_start_date,
 # grid()
 # agu_yrs = c(2010, 2014, 2015, 2017)
 # points(wyat$wy[wyat$wy %in% agu_yrs], wyat$PRCP_mm[wyat$wy %in% agu_yrs], pch=19, col="red")
-# write.csv(p_record_all_fj, file.path(agu_figure_dir, "interp_precip_1935_2018.csv"))
+# write.csv(p_record_all_fj, file.path("interp_precip_1935_2020.csv"))
 
 
 write_swbm_precip_input_file=function(){

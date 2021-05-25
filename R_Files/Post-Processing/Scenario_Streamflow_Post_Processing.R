@@ -743,22 +743,21 @@ save_stream_dep_csv = function(Flow_Diff_Daily = Flow_Diff_Daily,
                                start_month = 6, end_month = 12){
   # Calculate total depletion. nprc = No Pumping Reference Case
   nprc_colname = "natveg_gwmixed_outside_adj_difference_m3day"
-  
-  #fdd = Flow Difference Daily
   fdd_nprc = Flow_Diff_Daily[month(Flow_Diff_Daily$Date) %in% c(start_month:end_month), nprc_colname]
-  # hist(fdd_nprc)
-  # gt0 = sum(fdd_nprc_june_dec[fdd_nprc_june_dec>0]) * m3_to_TAF
-  # lt0 = sum(fdd_nprc_june_dec[fdd_nprc_june_dec<0]) * m3_to_TAF
-  # # check for a bunch of negative depletion reversal
-  # if(lt0/gt0 > 0.05){print(paste0("Negative depletion reversal exceeds 2%: ",round(lt0/gt0*100,2),"%"))}
-  
   total_depletion = sum(fdd_nprc) * m3_to_TAF
+  
+  #pull water year types for wyt breakdown
+  wyt = read.csv("C:/Users/Claire/Documents/GitHub/SiskiyouGSP2022/GSP_Analyses/Scott_Groundwater_Conditions/sgma_wyt_dataset.csv")
+  dry_yrs = wyt$WY[wyt$WYT %in% c("Critical", "Dry")]
+  wet_yrs = wyt$WY[wyt$WYT %in% c("Wet")]
   
   scen_dep_tab = data.frame(scenario_id = scenario_ids[2:n_scenarios],
                             neg_dep_TAF = NA,
                             pos_dep_TAF = NA,
                             scen_dep_TAF = NA,
-                            relative_dep = NA)
+                            relative_dep = NA,
+                            dry_yr_dep_rev_TAF = NA,
+                            wet_yr_dep_rev_TAF = NA)
   
   for(i in 2:length(scenario_ids)){
     scenario_id = scenario_ids[i]
@@ -767,10 +766,10 @@ save_stream_dep_csv = function(Flow_Diff_Daily = Flow_Diff_Daily,
     scen_colname = paste0(scenario_id,"_difference_m3day")
     
     #fdd = Flow Difference Daily
-    fdd_scen_june_dec = Flow_Diff_Daily[month(Flow_Diff_Daily$Date) %in% c(start_month:end_month),scen_colname]
-    # hist(fdd_scen_june_dec)
-    gt0 = sum(fdd_scen_june_dec[fdd_scen_june_dec>0]) * m3_to_TAF
-    lt0 = sum(fdd_scen_june_dec[fdd_scen_june_dec<0]) * m3_to_TAF
+    fdd_scen_date_window = Flow_Diff_Daily[month(Flow_Diff_Daily$Date) %in% c(start_month:end_month),scen_colname]
+    # hist(fdd_scen_date_window)
+    gt0 = sum(fdd_scen_date_window[fdd_scen_date_window>0]) * m3_to_TAF
+    lt0 = sum(fdd_scen_date_window[fdd_scen_date_window<0]) * m3_to_TAF
     # check for a bunch of negative depletion reversal
     if(abs(lt0/gt0) > 0.05)
     {print(paste0(scenario_id,
@@ -781,9 +780,23 @@ save_stream_dep_csv = function(Flow_Diff_Daily = Flow_Diff_Daily,
     scen_dep_tab$neg_dep_TAF[scen_dep_tab$scenario_id==scenario_id] = round(lt0,1)
     scen_dep_tab$pos_dep_TAF[scen_dep_tab$scenario_id==scenario_id] = round(gt0,1)
     
-    scen_depletion = round(sum(fdd_scen_june_dec) * m3_to_TAF,1)
+    scen_depletion = round(sum(fdd_scen_date_window) * m3_to_TAF,1)
     
     scen_dep_tab$scen_dep_TAF[scen_dep_tab$scenario_id==scenario_id] = scen_depletion
+    
+    # breakdown by wyt
+    fdd_dates = Flow_Diff_Daily$Date[month(Flow_Diff_Daily$Date) %in% c(start_month:end_month)]
+    fdd_year = year(fdd_dates)
+    fdd_wyt = wyt$WYT[match(fdd_year, wyt$WY)]
+    fdd_wyt[fdd_wyt == "Critical"] = "Dry" #store critical as Dry for this exercise
+    scen_dep_by_wyt = aggregate(fdd_scen_date_window, by = list(fdd_wyt), FUN = sum)
+    num_days_by_wyt = aggregate(fdd_scen_date_window, by = list(fdd_wyt), FUN = length)
+    
+    scen_dep_cfs_by_wyt = round(scen_dep_by_wyt$x / num_days_by_wyt$x * m3d_to_cfs, 2)
+    
+    scen_dep_tab$dry_yr_dep_rev_cfs[scen_dep_tab$scenario_id==scenario_id] = scen_dep_cfs_by_wyt[scen_dep_by_wyt$Group.1 == "Dry"]
+    scen_dep_tab$wet_yr_dep_rev_cfs[scen_dep_tab$scenario_id==scenario_id] = scen_dep_cfs_by_wyt[scen_dep_by_wyt$Group.1 == "Wet"]
+    
   }
   
   scen_dep_tab$relative_dep = round(scen_dep_tab$scen_dep_TAF / total_depletion, 2)
@@ -802,6 +815,7 @@ if(write_these_tables == TRUE){
   save_stream_dep_csv(start_month = 9, end_month = 10,  Flow_Diff_Daily = Flow_Diff_Daily)
   save_stream_dep_csv(start_month = 8, end_month = 11,  Flow_Diff_Daily = Flow_Diff_Daily)
   save_stream_dep_csv(start_month = 6, end_month = 12,  Flow_Diff_Daily = Flow_Diff_Daily)
+  save_stream_dep_csv(start_month = 7, end_month = 11,  Flow_Diff_Daily = Flow_Diff_Daily)
   
 }
 
