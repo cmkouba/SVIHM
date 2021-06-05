@@ -113,6 +113,7 @@ Stream_Regression_dir = file.path(svihm_dir, "Streamflow_Regression_Model")
 input_files_dir = file.path(svihm_dir, "SVIHM_Input_Files")
 time_indep_dir = file.path(svihm_dir, "SVIHM_Input_Files", "time_independent_input_files")
 ref_data_dir = file.path(svihm_dir, "SVIHM_Input_Files", "reference_data")
+
 ## Directory used to archive the precip and ET files for different scenarios
 scenario_dev_dir = file.path(svihm_dir, "SVIHM_Input_Files", "Scenario_Development")
 # Directory for connecting to the database
@@ -641,10 +642,25 @@ if( !(landuse_scenario %in% c("basecase","Basecase"))){
 
 # Intersect raster grid with adjudicated zone (for Layers 1 and 2)
 # Make new ASCII file SVIHM.zon
-
+nlayers = 2; nrows = 440; ncols = 210
 zon_line1 = paste(nlayers, nrows, ncols, sep = " ")
-zon_layer_topline = paste0("INTERNAL            (", ncols ,"I2)") # specify zone format
+zon_layer_topline = paste0("INTERNAL (", ncols ,"I2) -1") # specify zone format
+zon_last_line = "A 1 1"
 
+# rch_zone = as.matrix(read.table(file.path(time_indep_dir, "Recharge_Zones_SVIHM.txt")))
+# in_out_adj_zones = rch_zone
+# in_out_adj_zones[rch_zone >0] = 1
+
+# Read in raster and reproject adjudicated zone to be in UTM
+model_cells = raster(file.path(ref_data_dir, "model_cell_grid_approx"))
+adj_rep = spTransform(adj, crs(model_cells))
+
+#Spatially relate the gridcells and the fields designated as inside the adj zone
+in_out_raster = model_cells
+adj_zone_mask = mask(model_cells, adj_rep)
+values(in_out_raster)[values(adj_zone_mask==1)] = 2
+
+### CURRENTLY HERE. export to .zone file. run zonebudget.
 
 #  general_inputs.txt ------------------------------------------------
 
