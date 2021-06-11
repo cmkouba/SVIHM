@@ -660,7 +660,14 @@ in_out_raster = model_cells
 adj_zone_mask = mask(model_cells, adj_rep)
 values(in_out_raster)[values(adj_zone_mask==1)] = 2
 
-### CURRENTLY HERE. export to .zone file. run zonebudget.
+# Write the .ZON file.
+writeLines(zon_line1, con = file.path(MF_file_dir, "SVIHM_in_out_adj.zone"))
+write(zon_layer_topline, file = file.path(MF_file_dir, "SVIHM_in_out_adj.zone"), append = T)
+write(values(in_out_raster), file = file.path(MF_file_dir, "SVIHM_in_out_adj.zone"), ncolumns = ncols ,append = T)
+write(zon_layer_topline, file = file.path(MF_file_dir, "SVIHM_in_out_adj.zone"), append = T)
+write(values(in_out_raster), file = file.path(MF_file_dir, "SVIHM_in_out_adj.zone"), ncolumns = ncols ,append = T)
+write(zon_last_line,  file = file.path(MF_file_dir, "SVIHM_in_out_adj.zone"), append = T)
+
 
 #  general_inputs.txt ------------------------------------------------
 
