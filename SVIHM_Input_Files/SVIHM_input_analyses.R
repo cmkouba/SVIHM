@@ -463,7 +463,8 @@ get_daily_precip_table=function(final_table_start_date=model_start_date,
 # agu_yrs = c(2010, 2014, 2015, 2017)
 # points(wyat$wy[wyat$wy %in% agu_yrs], wyat$PRCP_mm[wyat$wy %in% agu_yrs], pch=19, col="red")
 # write.csv(p_record_all_fj, file.path("interp_precip_1935_2020.csv"))
-
+# raw_data = noaa[noaa$STATION %in% station_table@data$station,]
+# write.csv(raw_data, "raw_precip_data_6stns.csv")
 
 write_swbm_precip_input_file=function(){
   #read in original data (wys 1991-2011)
@@ -1524,6 +1525,27 @@ current_dir = "C:/Users/Claire/Documents/GitHub/SVIHM/Scenarios/basecase_input_m
 # hist(log10(p_record$PRCP_mm_orig), xlab = "log10 of Original Input daily precip", main = NA, col = "wheat", xlim = c(-1.5,2), ylim = c(0,0.6),freq = F)
 # hist(log10(p_record$interp_cal_fj_mean), xlab = "log10 of Interp FJ-Cal daily precip", main = NA, col = "wheat", xlim = c(-1.5,2), ylim = c(0,0.6),freq = F)
 # 
+
+
+# _How many NA precip values? ----------------------------------------------
+
+# #Fort Jones has way more than the Callahan station. Fckin NOAA.
+# 
+# fj = noaa[noaa$NAME == "FORT JONES RANGER STATION, CA US",]
+# fj$water_year = year(fj$DATE)
+# fj$water_year[month(fj$DATE) >9] = year(fj$DATE[month(fj$DATE) >9]) +1
+# na_by_yr = aggregate(fj$PRCP, by = list(fj$water_year), function(x){sum(is.na(x))})
+# plot(na_by_yr$Group.1, na_by_yr$x, xlab = "water year", ylab = "number of NAs", main = "FJ precip")
+# grid()
+# 
+cal = noaa[noaa$NAME == "CALLAHAN, CA US",]
+cal$water_year = year(cal$DATE)
+cal$water_year[month(cal$DATE) >9] = year(cal$DATE[month(cal$DATE) >9]) +1
+na_by_yr = aggregate(cal$PRCP, by = list(cal$water_year), function(x){sum(is.na(x))})
+plot(na_by_yr$Group.1, na_by_yr$x, xlab = "water year", ylab = "number of NAs", main = "Callahan precip")
+grid()
+
+
 # 
 # #_Precip (geography) ------------------------------------------------------
 # 
