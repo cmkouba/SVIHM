@@ -30,7 +30,8 @@
   IMPLICIT NONE
 
   INTEGER  :: nmonth, imonth, im, jday, day_of_simulation, ndays_total, i, ip, nrows, ncols
-  INTEGER  :: dummy, nsegs, n_wel_param, num_daily_out, unit_num, num_MAR_fields, alf_irr_stop_mo, alf_irr_stop_day
+  INTEGER  :: dummy, nsegs, n_wel_param, num_daily_out, unit_num, num_MAR_fields
+  INTEGER  :: alf_irr_stop_mo, alf_irr_stop_day, curtail_start_mo, curtail_start_day
   INTEGER, ALLOCATABLE, DIMENSION(:,:) :: zone_matrix, no_flow_matrix, output_zone_matrix, ET_Zone_Cells
   REAL, ALLOCATABLE, DIMENSION(:,:) :: ET_Cells_ex_depth
   INTEGER, ALLOCATABLE, DIMENSION(:)   :: MAR_fields, ip_daily_out
@@ -39,7 +40,8 @@
   REAL :: start, finish
   INTEGER, ALLOCATABLE, DIMENSION(:)  :: ndays
   CHARACTER(12) :: param_dummy, stream_diversion_limits
-  CHARACTER(12)  :: SFR_Template, rch_scenario, flow_scenario, landuse_scenario, early_cutoff_scenario, suffix
+  CHARACTER(12)  :: SFR_Template, rch_scenario, flow_scenario, landuse_scenario, suffix
+  CHARACTER(12)  :: early_alf_cutoff_scenario, curtailment_scenario, curtailment_status
   CHARACTER(50), ALLOCATABLE, DIMENSION(:) :: daily_out_name
   INTEGER, DIMENSION(31) :: ET_Active
   LOGICAL :: MAR_active, ILR_active, major_natveg_areas, daily_out_flag
@@ -53,7 +55,8 @@
   open(unit=10, file='general_inputs.txt', status='old')
   read(10, *) npoly, total_n_wells, nmonth, nrows, ncols, RD_Mult, SFR_Template
   read(10, *) rch_scenario, flow_scenario
-  read(10, *) alf_irr_stop_mo, alf_irr_stop_day, early_cutoff_scenario
+  read(10, *) alf_irr_stop_mo, alf_irr_stop_day, early_alf_cutoff_scenario
+  read(10, *) curtailment_scenario, curtail_start_mo, curtail_start_day
   read(10, *) landuse_scenario
 
   if (trim(rch_scenario)=='basecase' .or. trim(rch_scenario)=='Basecase' .or. trim(rch_scenario)=='BASECASE') then            ! Set logicals for Recharge Scenario type
@@ -96,15 +99,15 @@
       call EXIT
     end if
 
-    if (trim(early_cutoff_scenario)=='allyears' .or. trim(early_cutoff_scenario)=='AllYears' &
-    .or. trim(early_cutoff_scenario)=='ALLYEARS') then 
+    if (trim(early_alf_cutoff_scenario)=='allyears' .or. trim(early_alf_cutoff_scenario)=='AllYears' &
+    .or. trim(early_alf_cutoff_scenario)=='ALLYEARS') then 
       early_cutoff_dry_years_only = .FALSE.         ! Set logicals for Early Cutoff Scenario type 
-    else if (trim(early_cutoff_scenario)=='dryyearsonly' .or. trim(early_cutoff_scenario)=='DryYearsOnly' &
-      .or. trim(early_cutoff_scenario)=='DRYYEARSONLY') then
+    else if (trim(early_alf_cutoff_scenario)=='dryyearsonly' .or. trim(early_alf_cutoff_scenario)=='DryYearsOnly' &
+      .or. trim(early_alf_cutoff_scenario)=='DRYYEARSONLY') then
         early_cutoff_dry_years_only = .TRUE.         
-    else if (trim(early_cutoff_scenario).ne.'allyears' .or. trim(early_cutoff_scenario).ne.'AllYears' &
-      .or. trim(early_cutoff_scenario).ne.'ALLYEARS' .or. trim(early_cutoff_scenario).ne.'dryyearsonly' &
-      .or. trim(early_cutoff_scenario).ne.'DryYearsOnly' .or. trim(early_cutoff_scenario).ne.'DRYYEARSONLY') then
+    else if (trim(early_alf_cutoff_scenario).ne.'allyears' .or. trim(early_alf_cutoff_scenario).ne.'AllYears' &
+      .or. trim(early_alf_cutoff_scenario).ne.'ALLYEARS' .or. trim(early_alf_cutoff_scenario).ne.'dryyearsonly' &
+      .or. trim(early_alf_cutoff_scenario).ne.'DryYearsOnly' .or. trim(early_alf_cutoff_scenario).ne.'DRYYEARSONLY') then
         write(*,*)'Unknown alfalfa irrigation cutoff scenario input in general_inputs.txt'
         write(*,'(2a19)')'Land use Scenario: ',trim(landuse_scenario)
         write(800,*)'Unknown alfalfa irrigation cutoff scenario input in general_inputs.txt'
@@ -131,13 +134,21 @@
   write(800,'(2a15)')'Flow Scenario: ',trim(flow_scenario)
   write(*,'(2a19)')'Land use Scenario: ',trim(landuse_scenario)
   write(800,'(2a19)')'Land use Scenario: ',trim(landuse_scenario)
+
+  write(*, '(2a35)') 'All irrigation curtailment scenario: ', trim(curtailment_scenario)
+  write(800, '(2a35)') 'All irrigation curtailment scenario: ', trim(curtailment_scenario)
+  write(*,'(A22,I6)') "Curtail start month: ", curtail_start_mo
+  write(800,'(A22,I6)') "Curtail start month: ", curtail_start_mo
+  write(*,'(A17,I6)') "Curtail start day: ", curtail_start_day
+  write(800,'(A17,I6)') "Curtail start day: ", curtail_start_day
+
   write(*,'(A19,I6)') "Alfalfa end month: ", alf_irr_stop_mo
   write(800,'(A19,I6)') "Alfalfa end month: ", alf_irr_stop_mo
   write(*,'(A17,I6)') "Alfalfa end day: ", alf_irr_stop_day
   write(800,'(A17,I6)') "Alfalfa end day: ", alf_irr_stop_day
 
-  write(*,'(A42,A12)') "Early alfalfa cutoff in dry years only = ", early_cutoff_scenario
-  write(800,'(A42,A12)') "Early alfalfa cutoff in dry years only = ", early_cutoff_scenario
+  write(*,'(A42,A12)') "Early alfalfa cutoff in dry years only = ", early_alf_cutoff_scenario
+  write(800,'(A42,A12)') "Early alfalfa cutoff in dry years only = ", early_alf_cutoff_scenario
 
   SFR_Template = TRIM(SFR_Template)
   write(*,'(A27, A6)') 'SFR Template File Format = ',SFR_Template
@@ -388,6 +399,26 @@
      call read_streamflow(ndays(im), stream_diversion_limits, available_flow_ratio(im))     ! Read in streamflow inputs
 
      do jday=1, ndays(im)                         ! Loop over days in each month
+
+      curtailment_status = "not active"                   ! Default no irrigation curtailment
+      if(curtailment_scenario=="YesCurtail") then  ! Check if curtailment is active. 
+          if(curtail_start_mo > 6) then           ! If curtailment start month is Apr-Aug, then
+            if ((imonth>6 .and. &                     ! If imonth is later Apr-Aug, AND
+            (imonth > curtail_start_mo .or. &        ! If imonth is later than curtail_start_mo OR
+            imonth==curtail_start_mo .and. jday.ge. curtail_start_day)) .or. & ! If date is in month of curtail_start_mo, if day is after curtail_start_day, OR
+            imonth < 3 ) then                       ! If imonth is Sep-Nov (imonth 0-2)
+              curtailment_status = "active" 
+            endif
+          endif
+          if(curtail_start_mo <3) then           ! If curtailment start month is Sep-Nov (imonth 0-2), then
+            if (imonth < 3 .and. &                     ! If imonth is Sep-Nov, AND
+            (imonth > curtail_start_mo .or. &        ! If imonth is later than curtail_start_mo OR
+            imonth==curtail_start_mo .and. jday .ge. curtail_start_day)) then  ! If date is in month of curtail_start_mo, if day is after curtail_start_day
+              curtailment_status = "active" 
+            endif
+          endif
+        endif
+
        if (jday==1) monthly%ET_active = 0            ! Set ET counter to 0 at the beginning of the month. Used for turning ET on and off in MODFLOW so it is not double counted.    
        daily%ET_active  = 0                                 ! Reset ET active counter
        daily%irrigation = 0.                                ! Reset daily irrigation value to zero
@@ -416,13 +447,15 @@
 		       print*, 'Irrigation Type Updated'    
            write(800,*)'Irrigation Type Updated'
 		     end if
-         if (ILR_active) then
-           call IRRIGATION_ILR(ip, im, imonth, jday, eff_precip, alf_irr_stop_mo, alf_irr_stop_day, early_cutoff_dry_years_only)
-	       else
-	         call IRRIGATION(ip, im, imonth, jday, eff_precip, alf_irr_stop_mo, alf_irr_stop_day, early_cutoff_dry_years_only)
-	       end if
-	       call RECHARGE(ip,eff_precip,jday,imonth,moisture_save,MAR_active)
-		     call deficiency_check(ip, imonth, jday)       
+         if (curtailment_status=="not active") then ! If curtailment is not active, irrigate
+          if (ILR_active) then
+            call IRRIGATION_ILR(ip, im, imonth, jday, eff_precip, alf_irr_stop_mo, alf_irr_stop_day, early_cutoff_dry_years_only)
+          else
+            call IRRIGATION(ip, im, imonth, jday, eff_precip, alf_irr_stop_mo, alf_irr_stop_day, early_cutoff_dry_years_only)
+          end if
+        endif
+        call RECHARGE(ip,eff_precip,jday,imonth,moisture_save,MAR_active)
+        call deficiency_check(ip, imonth, jday)       
        enddo              ! End of polygon loop
 
        if (MAR_active) then

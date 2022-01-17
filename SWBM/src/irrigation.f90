@@ -63,7 +63,7 @@ MODULE irrigationmodule
 
   INTEGER :: im, imonth, jday, alf_irr_stop_mo, alf_irr_stop_day, alf_irr_stop_mo_for_irr_call, alf_irr_stop_day_for_irr_call
   INTEGER, ALLOCATABLE, DIMENSION(:) :: ims_in_dry_years
-  LOGICAL :: early_cutoff_dry_years_only
+  LOGICAL :: early_cutoff_dry_years_only 
   INTEGER, INTENT(in) :: ip
   DOUBLE PRECISION, INTENT(in) :: eff_precip
   REAL             :: irreff_wl, irreff_cp

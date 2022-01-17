@@ -771,7 +771,7 @@ gen_inputs = c(
         "! Basecase/MAR/ILR/MAR_ILR, Basecase/Flow_Lims",
         sep = "  "),
   paste(alf_irr_stop_mo, alf_irr_stop_day, early_cutoff_flag,
-        "! alf_irr_stop_mo  alf_irr_stop_day early_cutoff_scenario",
+        "! alf_irr_stop_mo  alf_irr_stop_day early_alf_cutoff_scenario",
         sep = "  "),
   paste(landuse_scenario, "! Basecase/Major_NatVeg")
   )

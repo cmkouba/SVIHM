@@ -64,7 +64,7 @@ graphics_type = 'png'    #output type for graphics, currently pdf or png
 # results_dir = "C:/Users/Claire/Documents/GitHub/SVIHM/R_Files/Post-Processing/Results"
 # setwd(results_dir)
 scenario_dir = "C:/Users/Claire/Documents/GitHub/SVIHM/Scenarios"
-scenario_dir_2 = "D:/SVIHM Scenarios Storage"
+scenario_dir_2 = "E:/SVIHM Scenarios Storage"
 start_date = as.Date("1990-10-01")
 end_date = as.Date("2018-09-30")
 start_wy = 1991
@@ -351,12 +351,34 @@ Flow_Diff_Monthly_Avg = merge(Flow_Diff_Monthly_Avg,Flow_Diff_Monthly_SD)
 Flow_Diff_Monthly_Avg$Date  = factor(Flow_Diff_Monthly_Avg$Date , levels = as.character(format(seq(as.Date("1990/1/1"), as.Date("1990/12/31"), "month"), '%b')))
 Flow_Diff_Monthly_Avg = Flow_Diff_Monthly_Avg[order(Flow_Diff_Monthly_Avg$Date), ]
 
-# DAILY FLOW
+# DAILY FLOW and depletion --------------------------------------------------------
 
 Daily_Flow = make_daily_flow_tab(
   daily_flow_tables = DP_flows_scenarios,
   scen_ids = scenario_ids)
+# write.csv(Daily_Flow, file = "Scenarios Daily Flow.csv")
 
+no_pump_ref_case = "natveg_outside_adj_dzgwET_only" # Set the No Pump Ref Case
+# no_pump_ref_case = "natveg_gwmixed_all_dzgwET_only" # Set the No Pump Ref Case
+# make depletion table
+depletion_tab = data.frame(Date = Daily_Flow$Date,
+                           no_pump_ref_case_m3day = Daily_Flow[,paste0(no_pump_ref_case,"_m3day")],
+                           no_pump_ref_case_cfs = Daily_Flow[,paste0(no_pump_ref_case,"_cfs")],
+                           basecase_m3day = Daily_Flow$basecase_m3day,
+                           basecase_cfs = Daily_Flow$basecase_cfs,
+                           mar_ilr_m3day = Daily_Flow$mar_ilr_m3day,
+                           mar_ilr_cfs = Daily_Flow$mar_ilr_cfs)
+depletion_tab$total_depletion_m3day = depletion_tab$no_pump_ref_case_m3day - depletion_tab$basecase_m3day
+depletion_tab$total_depletion_cfs = depletion_tab$no_pump_ref_case_cfs - depletion_tab$basecase_cfs
+depletion_tab$mar_ilr_dep_rev_m3day = depletion_tab$mar_ilr_m3day - depletion_tab$basecase_m3day
+depletion_tab$mar_ilr_dep_rev_cfs = depletion_tab$mar_ilr_cfs - depletion_tab$basecase_cfs
+
+# write.csv(depletion_tab, "Total Depl. and MAR_ILR Dep. Rev.csv")
+
+# dep_tab_s_n = depletion_tab[month(depletion_tab$Date) %in% 9:11,]
+# sum(dep_tab_s_n$total_depletion_m3day) / 1233.48 / 1000
+
+# Make tables for making scenario analysis plots
 # Average flow for each Stress Period
 Flow_SP_Avg = Daily_Flow# Copy daily data frame
 Flow_SP_Avg$Date = format(Flow_SP_Avg$Date, '%b-%y')

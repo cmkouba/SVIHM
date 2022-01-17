@@ -26,6 +26,15 @@ flow_scenario = "Basecase" # Can be Basecase/Flow_Lims/FlowLimsMAR. Flow limits 
 irr_demand_mult = 1 # Can be 1 (Basecase) or < 1 or > 1 (i.e., reduced or increased irrigation; assumes land use change)
 # set nat veg kc under Land Use Scenario.
 
+# Curtailing all irrigation scenarios:
+curtailment_scenario = "YesCurtail" # Default is "NoCurtail". "YesCurtail"
+curtail_start_mo = 8 # Month as month of year (7 = July)
+curtail_start_day = 1
+curtail_yrs_flag = "AllYears" # default is "AllYears". Currently not set up for "DryYearsOnly" for 91, 92, 94, 01, 09, 13, 14 and 18
+# Convert to month of wy (Oct=1, Nov=2, ..., Jul = 10, Aug=11, Sep=0)
+if(curtail_start_mo<9){curtail_start_mo = curtail_start_mo + 3
+}else{curtail_start_mo = curtail_start_mo - 9}
+
 # Month and day of the final day of alfalfa irrigation season. 
 # Default is Aug 31, 8/31
 alf_irr_stop_mo = 8 # Month as month of year (7 = July)
@@ -50,7 +59,7 @@ if(tolower(BDAs_scenario) != "basecase"){ stream_bed_elev_increase = 0.5} # set 
 irr_eff_scenario = "Basecase" # Basecase, or set irr efficiency increase or decrease amount (not applied to flood irrigation)
 
 #Land use scenario. 
-landuse_scenario ="bsasecase" # Default: basecase. For attribution study: major_natveg
+landuse_scenario ="basecase" # Default: basecase. For attribution study: major_natveg
 if(landuse_scenario=="major_natveg"){ # Default: 0.6. Set at 1.0 for major natveg scenarios. 
   # natveg_kc = 0.6
   natveg_kc = 1.0
@@ -63,16 +72,21 @@ if(landuse_scenario=="major_natveg"){ # Default: 0.6. Set at 1.0 for major natve
 # landuse_scenario_detail = "native veg, gw and mixed fields, inside adj"
 # landuse_scenario_detail = "native veg inside adj"
 # landuse_scenario_detail = "native veg, gw and mixed fields, all cultivated fields"
-landuse_scenario_detail = "native veg all cultivated fields"
+# landuse_scenario_detail = "native veg all cultivated fields"
 
 
 
 # Overall scenario identifier. Also makes the directory name; must match folder
-scenario_name = "basecase"
+# scenario_name = "basecase"
 # scenario_name = "mar_ilr" # "ilr" "mar"
 # scenario_name = "mar_ilr_max_0.019" # Options: 0.035, 0.003, or 0.019 (the arithmetic mean) or 0.01 (the geometric mean)
 # scenario_name = "mar_ilr_flowlims"#"flowlims"
 # scenario_name = "irrig_0.8"#"irrig_0.9" #
+# scenario_name = "curtail_start_jun01"
+# scenario_name = "curtail_start_jun15"
+# scenario_name = "curtail_start_jul01"
+# scenario_name = "curtail_start_jul15"
+scenario_name = "curtail_start_aug01"
 # scenario_name = "alf_irr_stop_jul10"
 # scenario_name = "alf_irr_stop_aug01"
 # scenario_name = "alf_irr_stop_aug01_dry_yrs_only"
@@ -117,7 +131,8 @@ ref_data_dir = file.path(svihm_dir, "SVIHM_Input_Files", "reference_data")
 ## Directory used to archive the precip and ET files for different scenarios
 scenario_dev_dir = file.path(svihm_dir, "SVIHM_Input_Files", "Scenario_Development")
 # Directory for connecting to the database
-dms_dir = file.path(dirname(svihm_dir), "SiskiyouGSP2022", "Data_Management_System")
+# dms_dir = file.path(dirname(svihm_dir), "SiskiyouGSP2022", "Data_Management_System")
+dms_dir = file.path("C:/Users/Claire/Box", "CKouba_Dissertation_DMS")
 # Folder for collecting outputs from various scenarios for comparison plots
 results_dir = file.path(svihm_dir, "R_Files","Post-Processing","Results")
 #Connect to Siskiyou DB (for generating SVIHM.hob. And precip, eventually ET and streamflow)
@@ -682,7 +697,10 @@ gen_inputs = c(
         "! Basecase/MAR/ILR/MAR_ILR, Basecase/Flow_Lims",
         sep = "  "),
   paste(alf_irr_stop_mo, alf_irr_stop_day, early_cutoff_flag,
-        "! alf_irr_stop_mo  alf_irr_stop_day early_cutoff_scenario",
+        "! alf_irr_stop_mo  alf_irr_stop_day early_alf_cutoff_scenario",
+        sep = "  "),
+  paste(curtailment_scenario, curtail_start_mo, curtail_start_day,
+        "! curtailment_scenario curtail_start_mo curtail_start_day",
         sep = "  "),
   paste(landuse_scenario, "! Basecase/Major_NatVeg")
   )
@@ -1444,8 +1462,12 @@ for (i in 1:num_stress_periods){
 
 ### 1) Get a cleaned water level dataframe
 # To do: make this contingent on if the connect_to_db worked
-wl = data.frame(tbl(siskiyou_tables, "wl_observations"))
-stations = data.frame(tbl(siskiyou_tables, "wl_data_wells"))
+# wl = data.frame(tbl(siskiyou_tables, "wl_observations"))
+# stations = data.frame(tbl(siskiyou_tables, "wl_data_wells"))
+
+# Now, pull from DMS archive, now that we're mostly working out of the cmkDissertate github
+wl = read.csv(file.path(dms_dir,"wl_observations_2022.01.14.csv"))
+stations = read.csv(file.path(dms_dir, "wells_2022.01.14.csv"))
 #else 
 # load spatial and tabular data
 # gsp_dir = "~/GitHub/SiskiyouGSP2022"
