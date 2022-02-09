@@ -11,6 +11,9 @@ library(rpostgis)
 library(rgdal)
 library(postGIStools) # pull from gis server
 library(rgeos) # for buffer function
+library(dataRetrieval) # for FJ flow download
+library(lubridate)
+
 ## dates in R are treated as YYYY-MM-DD for convenience. Dates in the model input files are DD-MM-YYYY.
 
 rm(list = ls())
@@ -27,9 +30,9 @@ irr_demand_mult = 1 # Can be 1 (Basecase) or < 1 or > 1 (i.e., reduced or increa
 # set nat veg kc under Land Use Scenario.
 
 # Curtailing all irrigation scenarios:
-curtailment_scenario = "YesCurtail" # Default is "NoCurtail". "YesCurtail"
+curtailment_scenario = "NoCurtail" # Default is "NoCurtail". "YesCurtail"
 curtail_start_mo = 8 # Month as month of year (7 = July)
-curtail_start_day = 1
+curtail_start_day = 15
 curtail_yrs_flag = "AllYears" # default is "AllYears". Currently not set up for "DryYearsOnly" for 91, 92, 94, 01, 09, 13, 14 and 18
 # Convert to month of wy (Oct=1, Nov=2, ..., Jul = 10, Aug=11, Sep=0)
 if(curtail_start_mo<9){curtail_start_mo = curtail_start_mo + 3
@@ -78,6 +81,7 @@ if(landuse_scenario=="major_natveg"){ # Default: 0.6. Set at 1.0 for major natve
 
 # Overall scenario identifier. Also makes the directory name; must match folder
 # scenario_name = "basecase"
+scenario_name = "basecase_for_leland"
 # scenario_name = "mar_ilr" # "ilr" "mar"
 # scenario_name = "mar_ilr_max_0.019" # Options: 0.035, 0.003, or 0.019 (the arithmetic mean) or 0.01 (the geometric mean)
 # scenario_name = "mar_ilr_flowlims"#"flowlims"
@@ -86,7 +90,8 @@ if(landuse_scenario=="major_natveg"){ # Default: 0.6. Set at 1.0 for major natve
 # scenario_name = "curtail_start_jun15"
 # scenario_name = "curtail_start_jul01"
 # scenario_name = "curtail_start_jul15"
-scenario_name = "curtail_start_aug01"
+# scenario_name = "curtail_start_aug01"
+# scenario_name = "curtail_start_aug15"
 # scenario_name = "alf_irr_stop_jul10"
 # scenario_name = "alf_irr_stop_aug01"
 # scenario_name = "alf_irr_stop_aug01_dry_yrs_only"
@@ -136,7 +141,7 @@ dms_dir = file.path("C:/Users/Claire/Box", "CKouba_Dissertation_DMS")
 # Folder for collecting outputs from various scenarios for comparison plots
 results_dir = file.path(svihm_dir, "R_Files","Post-Processing","Results")
 #Connect to Siskiyou DB (for generating SVIHM.hob. And precip, eventually ET and streamflow)
-source(file.path(dms_dir, "connect_to_db.R"))
+# source(file.path(dms_dir, "connect_to_db.R"))
 
 ## Directories for running the scenarios (files copied at end of script)
 
@@ -668,6 +673,7 @@ zon_last_line = "A 1 1"
 
 # Read in raster and reproject adjudicated zone to be in UTM
 model_cells = raster(file.path(ref_data_dir, "model_cell_grid_approx"))
+if(!exists("adj")){adj = readOGR(dsn = ref_data_dir, layer = "Adjudicated Area")} # read in adj. area if not done already for land use scenarios
 adj_rep = spTransform(adj, crs(model_cells))
 
 #Spatially relate the gridcells and the fields designated as inside the adj zone
@@ -711,13 +717,21 @@ write.table(gen_inputs, file = file.path(SWBM_file_dir, "general_inputs.txt"),
 # instream_flow_available_ratio.txt ------------------------------------------------
 
 #read in FJ flow and CDFW recommended flow for FJ gauge
-library(dataRetrieval)
-library(lubridate)
-fj_num = "11519500"
-fjd_all = readNWISdv(siteNumbers = fj_num, parameterCd="00060" )
-fjd_all = renameNWISColumns(fjd_all)
-# Subset for model period
-fjd = fjd_all[fjd_all$Date >= model_start_date & fjd_all$Date <= model_end_date,]
+
+fj_flow_file = file.path(ref_data_dir, paste0("FJ (USGS ",fj_num,") Daily Flow, ",model_start_date,"_",model_end_date,".csv"))
+
+if(file.exists(fj_flow_file)){
+  fjd = read.csv(fj_flow_file)  
+  fjd$Date=as.Date(fjd$Date)
+} else {
+  fj_num = "11519500"
+  fjd_all = readNWISdv(siteNumbers = fj_num, parameterCd="00060" )
+  fjd_all = renameNWISColumns(fjd_all)
+  # Subset for model period
+  fjd = fjd_all[fjd_all$Date >= model_start_date & fjd_all$Date <= model_end_date,]
+  write.csv(fjd, file.path(fj_flow_file), quote = F,row.names = F)
+  
+}
 
 cdfw_tab = read.csv(file.path(ref_data_dir,"cdfw_2017_instream_flows.csv"))
 
@@ -1454,28 +1468,12 @@ for (i in 1:num_stress_periods){
 # SVIHM.hob ---------------------------------------------------------------
 #Head Observation Package
 
-#Currently, hacking in a hard-coded contour drive on my local computer. non-transferrable.
-#To do: pull wl down from the damn data base eventually!
-
 
 ### TO DO: Join additional wells to the model grid and add their well loc. info to reference hob_info table.
 
-### 1) Get a cleaned water level dataframe
-# To do: make this contingent on if the connect_to_db worked
-# wl = data.frame(tbl(siskiyou_tables, "wl_observations"))
-# stations = data.frame(tbl(siskiyou_tables, "wl_data_wells"))
-
-# Now, pull from DMS archive, now that we're mostly working out of the cmkDissertate github
-wl = read.csv(file.path(dms_dir,"wl_observations_2022.01.14.csv"))
-stations = read.csv(file.path(dms_dir, "wells_2022.01.14.csv"))
-#else 
-# load spatial and tabular data
-# gsp_dir = "~/GitHub/SiskiyouGSP2022"
-# fig_dir = file.path(gsp_dir, "GSP_Figures")
-# local_layers_path = file.path(fig_dir, "scott_figure_layers.RData")
-# source(file.path(fig_dir,"Scott_load_environment.R"))
-# wl = wl_obs
-# stations = wells
+### 1) Get a water level dataframe
+wl = read.csv(file.path(ref_data_dir,"wl_observations_2022.01.14.csv"))
+stations = read.csv(file.path(ref_data_dir, "wells_2022.01.14.csv"))
 
 #merge SWN (long well names) onto wl obs table.
 stations_swn = stations[,c('well_code', 'swn')]
@@ -1601,454 +1599,3 @@ if(reservoir_plus_pipeline == TRUE){
   file.copy(file.path(svihm_dir,"R_Files","Model",'Update_SVIHM_Starting_Heads.R'), MF_file_dir)
   
 
-# OPTIONAL: copy output to Results folder for post-processing -------------
-
-# # Scenario Selection ------------------------------------------------------
-# recharge_scenario = "Basecase" # Can be Basecase/MAR/ILR/MAR_ILR
-# flow_scenario = "Basecase" # Can be Basecase/Flow_Lims. Flow limits on stream diversion specified in "available ratio" table.
-# irr_demand_mult = 0.9 # Can be 1 (Basecase) or < 1 or > 1 (i.e., reduced or increased irrigation; assumes land use change)(increased irrigation)
-# 
-# # # Scenario name for SWBM and MODFLOW
-# scenario_name = "mar_ilr_expanded_0.019_reservoir_french" #also makes the directory name; must match folder
-# # # 
-# # # New file architecture
-# scenario_dir = file.path(svihm_dir, "Scenarios",scenario_name)
-# SWBM_file_dir = scenario_dir
-# MF_file_dir = scenario_dir
-
-# ## Directories for running the scenarios (files copied at end of script)
-# 
-# SWBM_file_dir = file.path(svihm_dir, "SWBM", scenario_name)
-# MF_file_dir = file.path(svihm_dir, "MODFLOW",scenario_name)
-
-# #Copy flow tables on the mainstem
-# file.copy(from = file.path(MF_file_dir,"Streamflow_FJ_SVIHM.dat"),
-#           to = file.path(results_dir,paste0("Streamflow_FJ_SVIHM_",scenario_name,".dat")),
-#           overwrite=T)
-# file.copy(from = file.path(MF_file_dir,"Streamflow_Pred_Loc_2.dat"), 
-#           to = file.path(results_dir,paste0("Streamflow_Pred_Loc_2_",scenario_name,".dat")),
-#           overwrite=T)
-# file.copy(from = file.path(MF_file_dir,"Streamflow_Pred_Loc_3.dat"), 
-#           to = file.path(results_dir,paste0("Streamflow_Pred_Loc_3_",scenario_name,".dat")),
-#           overwrite=T)
-# 
-# file.copy(from = file.path(MF_file_dir,"SVIHM.sfr"), 
-#           to = file.path(results_dir,paste0("SVIHM_",scenario_name,".sfr")),
-#           overwrite=T)
-# file.copy(from = file.path(SWBM_file_dir,"monthly_groundwater_by_luse.dat"), 
-#           to = file.path(results_dir,paste0("monthly_groundwater_by_luse_",scenario_name,".dat")),
-#           overwrite=T)
-# file.copy(from = file.path(SWBM_file_dir,"monthly_deficiency_by_luse.dat"), 
-#           to = file.path(results_dir,paste0("monthly_deficiency_by_luse_",scenario_name,".dat")),
-#           overwrite=T)
-
-
-
-
-
-
-
-
-
-
-# Scratch work ------------------------------------------------------------
-
-# #plot DWR_1 through 5
-# wells = read.table ("C:/Users/ckouba/Git/SVIHM/SVIHM/SWBM/up2018/well_summary.txt", header = T)
-# head(wells)
-# 
-# library(raster)
-# library(maptools)
-# mon = shapefile("C:/Users/ckouba/Documents/UCD/SiskiyouSGMA/Data_Exploration/Scott_Legacy_GIS/Monitoring_Wells_All.shp")
-# 
-# dwr_names = c("DWR_1","DWR_2","DWR_3","DWR_4","DWR_5")
-# dwr_in = mon[mon$Well_ID %in% dwr_names,]
-# dwr_not_in = mon[mon$In_SVIHM == "No",]
-# plot(mon)
-# plot(dwr_in, pch = 19, col = "blue", add=T)
-# plot(dwr_not_in, pch = 19, col = "red", add=T)
-# pointLabel(dwr_in@coords, labels = dwr_in$Well_ID)
-# 
-# pointLabel(dwr_not_in@coords, labels = dwr_in$Well_ID_2)
-# write.csv(mon@data, file.path(ref_data_dir, "Monitoring_Wells_Names.csv"), row.names = F)
-# 
-#. ####################################
-# # Original Precip File Writing attempt
-# #to do: web scraper
-# # CDEC data
-# #FJN daily
-# "http://cdec.water.ca.gov/dynamicapp/req/CSVDataServlet?Stations=SFJ&SensorNums=41&dur_code=D&Start=1990-10-01&End=2019-05-20"
-# #CHA hourly accumulated
-# "http://cdec.water.ca.gov/dynamicapp/req/CSVDataServlet?Stations=CHA&SensorNums=2&dur_code=H&Start=1990-10-01T00%3A00&End=2019-05-20"
-# 
-# #NOAA data
-# #daily data ftp site: https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/
-# #daily data ftp readme: https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
-# #daily data documentation: https://www1.ncdc.noaa.gov/pub/data/cdo/documentation/GHCND_documentation.pdf
-# 
-# 
-# #https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/all/USC00041316.dly
-# #https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/all/USC00043182.dly
-# 
-# 
-# noaa = read.csv(file.path(ref_data_dir,"noaa_precip_fjn_cal.csv"))
-# noaa$DATE = as.Date(noaa$DATE)
-# 
-# cal = subset(noaa, STATION=="USC00041316" & DATE >= model_start_date & DATE <= model_end_date)
-# cal = data.frame(DATE = cal$DATE, PRCP = cal$PRCP)
-# fj = subset(noaa, STATION=="USC00043182" & DATE >= model_start_date & DATE <= model_end_date)
-# fj = data.frame(DATE = fj$DATE, PRCP = fj$PRCP)
-# 
-# # # Compare visually
-# # # plot(noaa$DATE, noaa$PRCP, xlim = as.Date(c("1991-10-01","2018-09-01")), type = "l")
-# # plot(cal$DATE, cal$PRCP, type = "l", col = "red")
-# # lines(fj$DATE, fj$PRCP, #xlim = as.Date(c("1991-10-01","2018-09-01")),
-# #      type = "l", col = "blue", add=T)
-# 
-# ### COMPARISON TABLE FOR 2 STATIONS
-# daily_precip = data.frame(model_days)
-# daily_precip = merge(x = daily_precip, y = cal, by.x = "model_days", by.y = "DATE", all=TRUE)
-# daily_precip = merge(x = daily_precip, y = fj, by.x = "model_days", by.y = "DATE", all=TRUE)
-# colnames(daily_precip)=c("Date","PRCP_mm_cal", "PRCP_mm_fj")
-# daily_precip$mean_PRCP = apply(X = daily_precip[,2:3], MARGIN = 1, FUN = mean, na.rm=T)
-# 
-# #isolate the precip data after the end of the original model
-# daily_precip_update = subset(daily_precip, Date >= as.Date("2011-10-01"))
-# daily_precip_update = subset(daily_precip, Date >= as.Date("2011-10-01"))
-# 
-# ### HANDLE NAs
-# 
-# # #check the NA values
-# # which(is.na(daily_precip_update$mean_PRCP))
-# # daily_precip_update[is.na(daily_precip_update$mean_PRCP),]
-# #shit that's a huge gap in december 2012. to do: find alternate precip data source for this gap
-# #TEMPORARY SOLUTION FOR NOW: 
-# #just put the average of all December dates in that window
-# # dec 4-30th
-# 
-# #calculate average precip values for that day in december over the whole model record (wy1991+)
-# precip_dec = subset(daily_precip, month(Date) == 12 & day(Date) >=4 & day(Date) <=30)
-# precip_dec$day = day(precip_dec$Date)
-# daily_precip_dec = aggregate(precip_dec$mean_PRCP, by=list(precip_dec$day), FUN=mean, na.rm=T)
-# 
-# #replace NAN values in Dec 2012 with average values over whole record
-# daily_precip_update$mean_PRCP[daily_precip_update$Date >= as.Date("2012-12-04") 
-#                               & daily_precip_update$Date <= as.Date("2012-12-30")]=daily_precip_dec$x
-# 
-# #set remaining days with NA in both records to 0
-# daily_precip_update$mean_PRCP[is.na(daily_precip_update$mean_PRCP)] = 0
-# 
-# 
-# ### FORMAT AND WRITE PRECIP FILE
-# #Format the update to attach to the original precip file
-# daily_precip_update=data.frame(mean_PRCP = daily_precip_update$mean_PRCP, Date = daily_precip_update$Date)
-# daily_precip_update$Date = paste(str_pad(day(daily_precip_update$Date), 2, pad="0"),
-#                                  str_pad(month(daily_precip_update$Date), 2, pad="0"),
-#                                  year(daily_precip_update$Date), sep = "/")
-# daily_precip_update$mean_PRCP = daily_precip_update$mean_PRCP / 1000 #convert to meters
-# 
-# #read in original data (wys 1991-2011)
-# daily_precip_orig = read.table(file.path(ref_data_dir,"precip_orig.txt"))
-# colnames(daily_precip_orig) = colnames(daily_precip_update)
-# 
-# #combine and write as text file
-# daily_precip_updated = rbind(daily_precip_orig, daily_precip_update)
-# write.table(daily_precip_updated, file = file.path(SWBM_file_dir, "precip.txt"),
-#             sep = " ", quote = FALSE, col.names = FALSE, row.names = FALSE)
-# 
-# 
-#. ############################################
-# # Initial RefET writing attempt
-# #to do: webscrape cimis? (login?)
-# #units? 
-# et_dl_may2019 = read.csv(file.path(ref_data_dir,"spatial_eto_report.csv"))
-# 
-# ##generate new et record
-# et_dl_may2019$Date = as.Date(et_dl_may2019$Date, format = "%m/%d/%Y")
-# et = subset(et_dl_may2019, Date >= model_start_date & Date <= model_end_date)
-# et = data.frame(Date = et$Date, ETo_mm = et$ETo..mm.day.)
-# 
-# #Update existing record
-# #subset update for ET, build update dataframe in same format as original input file
-# et_update_allcol = subset(et_dl_may2019, Date >= as.Date("2011-10-01") & Date <= model_end_date)
-# ETo_m = et_update_allcol$ETo..mm.day./1000
-# et_update = data.frame(ETo_m)
-# et_update$ETo_in = et_update$ETo_m * 39.3701 #convert to inches
-# et_update$Date = et_update_allcol$Date = paste(str_pad(day(et_update_allcol$Date), 2, pad="0"),
-#                                                str_pad(month(et_update_allcol$Date), 2, pad="0"),
-#                                                year(et_update_allcol$Date), sep = "/")
-# 
-# #Read in original file
-# ref_et_orig = read.table(file.path(ref_data_dir,"ref_et_orig.txt"))
-# # head(ref_et_orig)
-# # plot(as.Date(ref_et_orig$V3, format = "%d/%m/%Y"),ref_et_orig$V1, type = "l")
-# 
-# #Combine into updated ET record, check for continuity, and write file
-# colnames(ref_et_orig) = colnames(et_update)
-# ref_et_updated = rbind(ref_et_orig, et_update)
-# # plot(as.Date(ref_et_updated$Date, format = "%d/%m/%Y"),ref_et_updated$ETo_m, type = "l")
-# # sum(is.na(ref_et_updated$ETo_m))
-# write.table(ref_et_updated, file = file.path(SWBM_file_dir, "ref_et.txt"),
-#             sep = " ", quote = FALSE, col.names = FALSE, row.names = FALSE)
-
-
-# .polygons_table.txt ------------------------------------------------------
-
-#Plots for this analysis:
-# Fields completely in, completely out, or partially in the adjudicated zone
-# Fields "inside" (defined as >5% field area inside adj zone) and outside adj zone
-# Pie charts - more alfalfa in adjudicated zone that outside, but pretty diverse
-# Water source map
-# Area calculations
-
-# if(landuse_scenario != "basecase"){
-#   # Run spatial analysis
-#   
-#   # read in datasets
-#   poly = readOGR(dsn = ref_data_dir, layer = "Landuse_20190219")
-#   # adj = get_postgis_query(siskiyou_spatial, "SELECT * FROM scott_adjudicated_area", geom_name = "geom")
-#   # writeOGR(adj, dsn = ref_data_dir, layer = "Adjudicated Area",driver = "ESRI Shapefile")
-#   adj = readOGR(dsn = ref_data_dir, layer = "Adjudicated Area")
-#   
-#   poly = spTransform(poly, crs(adj))
-#   
-#   #Calculate the fraction of each polygon *inside* the adjudicated zone.
-#   poly$fraction_in_adj = 0 # initialize new column
-#   
-#   for(i in 1:max(poly$Polynmbr)){
-#     selector = poly$Polynmbr==i
-#     field = poly[selector,]
-#     if(!gIsValid(field)){
-#       field = gBuffer(field, width = 0) # fix invalid geoms and warn about it
-#       print(paste("polygon number",i,"invalid"))} 
-#     
-#     if(gIntersects(adj, field)){
-#       overlap_poly = intersect(field, adj)
-#       poly$fraction_in_adj[selector] = round(area(overlap_poly) / area(field), digits = 3) # otherwise get leftover digit junk
-#     }
-#   }
-#   
-#   # Amend polygons.txt table
-#   
-#   # Note: this does not preserve "notes" column
-#   poly_column_classes = c(rep("integer",4),
-#                           "numeric","integer","numeric","numeric",
-#                           "integer","integer","character",
-#                           rep("NULL",16)) # get rid of empty columns in the text file
-#   
-#   poly_tab = read.table(file.path(time_indep_dir,"polygons_table.txt"),
-#                         header = T, comment.char = "!", 
-#                         fill = T, sep = "\t", colClasses = poly_column_classes)
-#   colnames(poly_tab) = c("Field_ID",colnames(poly_tab)[2:11])
-#   
-#   
-#   in_adj_threshold = 0.05 # lower numbers mean, just a sliver overlapping are included
-#   fields_inside_adj = poly$Polynmbr[poly$fraction_in_adj > in_adj_threshold]
-#   fields_outside_adj = poly$Polynmbr[!(poly$Polynmbr %in% fields_inside_adj)]
-#   
-#   
-#   fields_inside_adj = poly[poly$fraction_in_adj > in_adj_threshold,]
-#   fields_outside_adj =  poly[poly$fraction_in_adj <= in_adj_threshold,]
-#   
-#   # poly_saved = poly
-#   # # poly = poly_saved
-#   # poly_tab_saved = poly_tab
-#   
-#   # png(filename = "parcels_adj_zone_for_scenario.png", height=9.5, width = 6.2, units = "in", res = 300)
-#   # plot(basin, lwd = 2, main = "Fields considered within Adjudicated Area for SVIHM Scenario")
-#   # plot(fields_inside_adj, add=T, col = rgb(0,0,1, 0.5))
-#   # plot(fields_outside_adj, add=T, col = rgb(0,1,0,0.3))
-#   # plot(adj, add=T, border = "red", lwd = 2)#col = rgb(1,0,0,0.3))
-#   # legend(x = "bottomleft",
-#   #        lwd = c(2, 2, NA,NA), pch = c(NA,NA, 15, 15),
-#   #        col = c("black","red","blue", "green"),
-#   #        legend = c("Groundwater Basin", "Adjudicated Zone", "Inside Fields", "Outside Fields"))
-#   # dev.off()
-#   
-#   # sq_m_per_acre = 4046.86
-#   # sum(area(fields_inside_adj))/ unique(area(basin)) #sum(area(poly))
-#   # sum(area(fields_inside_adj)) / sq_m_per_acre # convert to acres
-#   # sum(area(fields_outside_adj))/ sum(area(poly)) #unique(area(basin)) #
-#   # sum(area(fields_outside_adj)) / sq_m_per_acre # convert to acres
-#   
-#   # Explore/visualize
-#   # area(adj)/sum(area(poly))*100 # covers 20.0% of the land area in this shapefile
-#   # area(adj)/area(basin)*100 # covers 15.7% of the land area of the basin
-#   # plot(poly)
-#   # plot(adj, add=T, col=rgb(.5,.5,.5,0.5))
-#   
-#   
-#   #Data exploration - visualize 3 categories of field. All in, all out, or overlapping
-#   
-#   # fields_totally_in_adj = poly[poly$fraction_in_adj==1,]
-#   # fields_totally_outside_adj = poly[poly$fraction_in_adj==0,]
-#   # fields_partially_in_adj = poly[poly$fraction_in_adj !=0 & poly$fraction_in_adj !=1 ,]
-#   
-#   # sum(area(fields_totally_in_adj)) / sq_m_per_acre # convert to acres
-#   # sum(area(fields_totally_outside_adj)) / sq_m_per_acre # convert to acres
-#   # sum(area(fields_partially_in_adj)) / sq_m_per_acre # convert to acres
-#   
-#   
-#   # png(filename = "parcels_adj_zone.png", height=9.5, width = 6.2, units = "in", res = 300)
-#   # plot(basin, lwd = 2, main = "Relation of Parcels to the Adjudicated Zone")
-#   # plot(fields_totally_in_adj, add=T, col = rgb(0,0,1,.7), border = "gray")
-#   # plot(fields_totally_outside_adj, add=T, col = rgb(0,1,0,.7), border = "gray")
-#   # plot(fields_partially_in_adj, add=T, col = rgb(1,0,0,.7), border = "gray")
-#   # legend(x = "bottomleft",
-#   #        col = c("black","blue","green","red"),
-#   #        pch=c(NA,rep(15,3)),
-#   #        lwd = c(2,rep(NA,3)),
-#   #        legend = c("Basin Boundary","Completely Inside", "Completely Outside", "Overlaps Zone Border"))
-#   # dev.off()
-#   
-#   # # fractions of the basin area
-#   # "Totally inside adjudicated zone:"
-#   # sum(area(fields_totally_in_adj)) / sum(area(poly))
-#   # sum(area(fields_totally_in_adj)) / area(basin)
-#   # "Totally outside adjudicated zone:"
-#   # sum(area(fields_totally_outside_adj)) / sum(area(poly))
-#   # sum(area(fields_totally_outside_adj)) / area(basin)
-#   # "Overlapping adjudicated zone boundary:"
-#   # sum(area(fields_partially_in_adj))/ sum(area(poly))
-#   # sum(area(fields_partially_in_adj))/ area(basin)
-#   
-#   
-#   # #Color by water source - initialize columns
-#   # poly$wat_source_from_svihm = NA
-#   # poly$wat_source_from_svihm_color = NA
-#   # 
-#   # # make water source color table
-#   # wat_source = c(1,2,3,4,5,999)
-#   # wat_source_descrip = c("SW","GW","Mixed", "Sub-irrigated","Dry","Unknown")
-#   # wat_source_color = c("dodgerblue","firebrick2","darkorchid1","green","yellow","gray")
-#   # 
-#   # wat_source_df = data.frame(ws_code = wat_source,
-#   #                            descrip = wat_source_descrip,
-#   #                            color = wat_source_color)
-#   # #match codes and colors
-#   # poly$wat_source_from_svihm = poly_tab$Water_Source[match(poly$Polynmbr, poly_tab$Field_ID)]
-#   # poly$wat_source_from_svihm_color = wat_source_df$color[match(poly$wat_source_from_svihm, wat_source_df$ws_code)]
-#   # 
-#   # # #plot
-#   # png(filename = "parcels_wat_source.png", height=9.5, width = 6.2, units = "in", res = 300)
-#   # plot(basin, lwd = 2, main = "Irrigation Water Sources")
-#   # plot(poly, add=T, col = poly$wat_source_from_svihm_color, border = "darkgray")
-#   # legend(x = "bottomleft", legend = wat_source_df$descrip,
-#   #        col = wat_source_df$color, pch = rep(15,6))
-#   # 
-#   # # plot(adj, add=T, col= rgb(0.5,0.5,0.5,0.5))
-#   # dev.off()
-#   
-#   #Color by land use - initialize columns
-#   # poly$landuse = NA
-#   # poly$landuse_color = NA
-#   # 
-#   # #Land use key:
-#   # # alfalfa = 25; palture = 2; ET_noIrr = 3 (native veg, assumes kc of 0.6);  noET_noIrr = 4; water = 6
-#   # 
-#   # # make a land use/crop type color table
-#   # lu = c(25,2,3,4,6)
-#   # lu_descrip = c("Alfalfa","Pasture","ET_noIrr","noET_noIrr", "Water")
-#   # lu_color = c("forestgreen","darkolivegreen2","wheat","red","dodgerblue")
-#   # 
-#   # lu_df = data.frame(lu_code = lu,
-#   #                    descrip = lu_descrip,
-#   #                    color = lu_color)
-#   # #match codes and colors
-#   # poly$landuse_from_svihm = poly_tab$Landuse[match(poly$Polynmbr, poly_tab$Field_ID)]
-#   # poly$landuse_color = lu_df$color[match(poly$landuse_from_svihm, lu_df$lu_code)]
-#   # 
-#   # # #plot
-#   # png(filename = "parcels_landuse_basecase.png", height=9.5, width = 6.2, units = "in", res = 300)
-#   # plot(basin, lwd = 2, main = "Land Use / Crop Type: Basecase")
-#   # plot(poly, add=T, col = poly$landuse_color, border = "darkgray", lwd=0.5)
-#   # legend(x = "bottomleft", 
-#   #        legend = c(lu_df$descrip[1:2],"ET, No Irr. (Native Veg.)",
-#   #                   "No ET, No Irr. (e.g. Tailings)","Water"),
-#   #        col = lu_df$color, pch = rep(15,6))
-#   # 
-#   # # plot(adj, add=T, col= rgb(0.5,0.5,0.5,0.5))
-#   # dev.off()
-#   
-#   
-#   # #Water source fraction of parcel area  
-#   # wat_source_area = aggregate(area(poly), by = list(poly$wat_source_from_svihm), FUN = "sum")
-#   # wat_source_area$frac_parcels = round(wat_source_area$x / sum(area(poly)),digits = 3)
-#   # wat_source_area$frac_basin = round(wat_source_area$x / unique(area(basin)),digits = 3)
-#   
-#   # #proportion of fields in each category 
-#   # par(mfrow = c(3,1))
-#   # pie(summary(poly_tab$Landuse), main = "all fields")
-#   # pie(summary(poly_tab$Landuse[poly_tab$Field_ID %in% fields_inside_adj]), 
-#   #     main = paste("fields in adj,", in_adj_threshold, "overlap needed"))
-#   # pie(summary(poly_tab$Landuse[!(poly_tab$Field_ID %in% fields_inside_adj)]), 
-#   #     main = paste("fields outside adj,", in_adj_threshold, "overlap needed"))
-#   
-#   
-#   
-#   # # find weird parcels
-#   # pdf(file = "weird_parcel_finder.pdf",width = 8.5, height = 11)
-#   # for(i in 1:length(poly$Polynmbr)){
-#   #   field = poly[poly$Polynmbr==i,]
-#   #   # print(area(field))
-#   #   if(area(field) > 10^5 & i %in% fields_partially_in_adj$Polynmbr) {
-#   #     plot(basin, main = i)
-#   #     plot(field, col = "pink", border = "red", lwd = 2,add=T)
-#   #     
-#   #   }
-#   # }
-#   # dev.off()
-#   
-#   ## Weird: 714. a couple others.
-#   #in the find-weird-parcels analysis, I decided to exclude parcels with 5% or less of their area in the adjudicated zone.
-#   
-#   
-#   # Amend the SVIHM polygons table and write
-#   poly_tab_amended = poly_tab
-#   
-#   #Land use key:
-#   # alfalfa = 25
-#   # palture = 2
-#   # ET_noIrr = 3 (native veg, assumes kc of 0)
-#   # noET_noIrr = 4
-#   # water = 6
-#   
-#   # # make water source color table
-#   # wat_source = c(1,2,3,4,5,999)
-#   # wat_source_descrip = c("SW","GW","Mixed", "Sub-irrigated","Dry","Unknown")
-#   # wat_source_color = c("dodgerblue","firebrick2","darkorchid1","green","yellow","gray")
-#   
-#   
-#   if(landuse_scenario == "native veg outside adj"){
-#     poly_tab_amended$Landuse[poly_tab_amended$Field_ID %in% fields_outside_adj$Polynmbr] = 3
-#   } else if(landuse_scenario == "native veg, gw and mixed fields, outside adj"){
-#     poly_tab_amended$Landuse[poly_tab_amended$Field_ID %in% fields_outside_adj$Polynmbr &
-#                                poly_tab_amended$Water_Source %in% c(2, 3)] = 3
-#   }
-#   
-#   # png(filename = "parcels_landuse_natveg_gwmixed_outside_adj.png", height=9.5, width = 6.2, units = "in", res = 300)
-#   # # png(filename = "parcels_landuse_natveg_outside_adj.png", height=9.5, width = 6.2, units = "in", res = 300)
-#   # #match codes and colors
-#   # poly$landuse_from_svihm = poly_tab_amended$Landuse[match(poly$Polynmbr, poly_tab_amended$Field_ID)]
-#   # poly$landuse_color = lu_df$color[match(poly$landuse_from_svihm, lu_df$lu_code)]
-#   # 
-#   # 
-#   # plot(basin, lwd = 2, main = "Land Use / Crop Type: NV GWM OA")
-#   # plot(poly, add=T, col = poly$landuse_color,
-#   #      border = "darkgray", lwd=0.5)
-#   # legend(x = "bottomleft", 
-#   #        legend = c(lu_df$descrip[1:2],"ET, No Irr. (Native Veg.)",
-#   #                   "No ET, No Irr. (e.g. Tailings)","Water"),
-#   #        col = lu_df$color, pch = rep(15,6))  
-#   # # plot(adj, add=T, col= rgb(0.5,0.5,0.5,0.5))
-#   # dev.off()
-#   
-#   
-#   # poly$landuse = poly_tab_amended$Landuse[match(poly$Polynmbr, poly_tab_amended$Field_ID)]
-#   # plot(poly, col = poly$landuse)
-#   
-#   write.table(x = poly_tab_amended, quote = F,
-#               file = file.path(SWBM_file_dir, "polygons_table.txt"),
-#               sep = "\t",col.names=TRUE, row.names = F)
-# }
-
