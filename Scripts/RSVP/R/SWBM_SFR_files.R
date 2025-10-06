@@ -137,7 +137,6 @@ streamflow_curtailment <- function(flows,
 
   }
 
-  # CURRENTLY TROUBLESHOOTING
   if(!is.null(min_flow_regime)){
     # convert example dates in min_flow_regime to model-period time series
     min_flow_alldates = data.frame(date = irr[[date_col]])
@@ -146,20 +145,35 @@ streamflow_curtailment <- function(flows,
 
     min_flow_regime$month = month(min_flow_regime$example_dates)
     min_flow_regime$day = day(min_flow_regime$example_dates)
-    for(i in 1:length(streams)){ #currently assumes min-flow regime applies to all streams
+    for(i in 1:length(streams)){
       stream = streams[i]
-      min_flow_alldates$newcol = NA
-      # aaah leap days
-      for(j in 1:nrow(min_flow_regime)){
+      min_flow_alldates[,stream] = NA
+      for(j in 1:nrow(min_flow_regime)){ # for each date, find correct threshold, assign to all years in model period on that date
         date_j = min_flow_regime$example_dates[j]
         date_picker = min_flow_alldates$month == month(date_j) & min_flow_alldates$day == day(date_j)
-        min_flow_alldates$newcol = min_flow_regime[date_picker,stream]
+        min_flow_alldates[date_picker,stream] = min_flow_regime[j,stream]
       }
-      colnames(min_flow_alldates)[ncol(min_flow_alldates)] = stream
+      # calculate how much water is reserved for non-irr (env. flows)
+      trib_comparison = data.frame(date = min_flow_alldates$date,
+                                   min = min_flow_alldates[,stream],
+                                   irr = irr[,stream],
+                                   non_irr = non_irr[,stream],
+                                   irr_out = NA, non_irr_out = NA)
+      trib_comparison$non_irr_out = pmin(trib_comparison$irr, trib_comparison$min)
+      # calculate how much water remains available for irrigation
+      trib_comparison$irr_out = pmax(0, trib_comparison$irr - trib_comparison$non_irr_out)
+      # assign to output variables
+      irr[,stream] = trib_comparison$irr_out
+      non_irr[,stream] = trib_comparison$non_irr_out
+
+      # currently finalizing
 
     }
 
     # Assign min(min_flow, irr) to non-irr
+
+
+
     # subtract min flows from irr (or set to 0)
   }
 

@@ -609,14 +609,16 @@ alter_SWBM_sfr_inflows <- function(subws_inflows,
         daily_all[[1]] <- assimilate_fj_update(daily_all[[1]], fj_update)
       }
 
-      # diagnostic plots: FJ vs
       update_dir = latest_dir(data_dir['update_dir','loc'])
       fj_file = list.files(update_dir)[grep(pattern = "11519500",
                                   x = list.files(update_dir))]
       fj_flow = read.csv(file.path(update_dir,fj_file))
       trib_days = subws_inflows$irr$Day
 
-      for(i in 1:nrow(min_flows)){
+      # translate FJ flow values (+- 10%) to median values in each tributary
+      # nrows = (num. min flow values in regime x num. tributaries)
+      min_flow_val_indices = which(!duplicated(min_flows$Flow_cfs))
+      for(i in min_flow_val_indices){
         min_fj = min_flows$Flow_cfs[i]
         fj_dates_around_min = fj_flow$Date[fj_flow$Flow < min_fj * 1.1 & fj_flow$Flow > min_fj* 0.9]
         for(j in 2:(ncol(subws_inflows$irr))){
@@ -638,14 +640,13 @@ alter_SWBM_sfr_inflows <- function(subws_inflows,
 
       }
 
-      # Build table of dates and minimum flow values for FJ and each trib
-
+      # Build table of dates (rows) and minimum flow values for FJ and each trib (columns)
       example_wy = 2020
       example_dates = seq.Date(from = as.Date(paste0(example_wy-1,"-10-01")), to = as.Date(paste0(example_wy,"-09-30")), by = "day")
       min_flows$ex_wy = example_wy; min_flows$ex_wy[min_flows$start_month>9] = example_wy-1
       min_flows$start_date = as.Date(paste(min_flows$ex_wy, min_flows$start_month, min_flows$start_day, sep = "-"))
       min_flows$end_date = as.Date(paste(min_flows$ex_wy, min_flows$end_month, min_flows$end_day, sep = "-"))
-      #add  FJ flow to regime tab
+      #Add FJ flow to regime tab (the designated flow on each date)
       regime_tab = data.frame(example_dates = example_dates)#, month = month(example_dates), day = day(example_dates))
       regime_tab$FJ_min_flow_cfs = NA
       for(i in 1:nrow(min_flows)){
@@ -659,7 +660,7 @@ alter_SWBM_sfr_inflows <- function(subws_inflows,
         # assign regime flow value to the designated dates
         regime_tab$FJ_min_flow_cfs[assign_these_rows] = flow_cfs
       }
-      # add Tribs min flow based on fj_to_tribs conversion
+      # add Tribs min flow to the regime tab based on fj_to_tribs conversion
       for(j in 2:ncol(subws_inflows$irr)){
         regime_tab$new_col = NA
 
@@ -672,6 +673,10 @@ alter_SWBM_sfr_inflows <- function(subws_inflows,
           flow_m3d = fj_to_tribs$trib_min_m3day[trib_flow_picker]
           flow_start = min_flows$start_date[i]
           flow_end = min_flows$end_date[i]
+
+          if(length(flow_m3d)>1){print(paste0(fj_to_tribs$trib_col[trib_flow_picker],
+                                              fj_to_tribs$fj_min_cfs, " cfs,",
+                                              length(flow_m3d), " nums"))}
 
           assign_these_rows = regime_tab$example_dates >= flow_start &
             regime_tab$example_dates <= flow_end
