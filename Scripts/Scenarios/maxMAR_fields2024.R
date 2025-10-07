@@ -9,7 +9,7 @@ library(sf)
 
 # Scenario Settings -----------------------------------------------------
 scen <- list(
-  'name'             = 'maxMAR_fields24',     # Scenario name, will be part of directory name
+  'name'             = 'maxMAR_fields2024',     # Scenario name, will be part of directory name
   'type'             = 'update',       # Basecase, Update, or PRMS - where to get meteorological inputs
   'landcover_id'     = 'basecase',     # Landcover scenario identifier
   'curtail_id'       = 'basecase',     # curtailment scenario identifier
