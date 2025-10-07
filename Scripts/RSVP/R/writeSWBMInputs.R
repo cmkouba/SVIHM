@@ -579,7 +579,10 @@ write_SWBM_SFR_diversions_file <- function(filename = "SFR_diversions.txt",
 alter_SWBM_sfr_inflows <- function(subws_inflows,
                                    scenario_id,
                                    min_flow_file_name = NA,
-                                   rerun_FJ_trib_corr = F) {
+                                   rerun_FJ_trib_corr = F,
+                                   reservoir_id = NA,
+                                   num_days = NULL,
+                                   start_res_full = F) {
   if(!is.na(min_flow_file_name)){min_flows = read.csv(min_flow_file_name)}
 
   if(scenario_id == "basecase"){
@@ -641,7 +644,7 @@ alter_SWBM_sfr_inflows <- function(subws_inflows,
       }
 
       # Build table of dates (rows) and minimum flow values for FJ and each trib (columns)
-      example_wy = 2020
+      example_wy = 2020 # must be a leap year to capture all dates in model period
       example_dates = seq.Date(from = as.Date(paste0(example_wy-1,"-10-01")), to = as.Date(paste0(example_wy,"-09-30")), by = "day")
       min_flows$ex_wy = example_wy; min_flows$ex_wy[min_flows$start_month>9] = example_wy-1
       min_flows$start_date = as.Date(paste(min_flows$ex_wy, min_flows$start_month, min_flows$start_day, sep = "-"))
@@ -704,8 +707,9 @@ alter_SWBM_sfr_inflows <- function(subws_inflows,
 
     } else {
       ref_files = list.files(data_dir["ref_data_dir","loc"])
-      latest_regime_tab_filename = ref_files[grep(x = ref_files,
+      latest_regime_tab_filenames = ref_files[grep(x = ref_files,
                                                   pattern = "FJ Emergency Flows 2025 Converted to Median Trib Flow")]
+      latest_regime_tab_filename = sort(latest_regime_tab_filenames, decreasing = T)[1]
       regime_tab = read.csv(file.path(data_dir["ref_data_dir","loc"],latest_regime_tab_filename))
     }
 
@@ -713,8 +717,116 @@ alter_SWBM_sfr_inflows <- function(subws_inflows,
                                             min_flow_regime = regime_tab)
   } else if(scenario_id == "none") {
     # do nothing, return unaltered inflows
-  }   else {
-    stop(paste('Unrecognized scenario:',scenario_id,'. Must be one of "basecase","none","eflows25_div_lims"'))
+  }   else if(tolower(scenario_id) %in% c("reservoir_s_fork","reservoir_etna",
+                                 "reservoir_french","reservoir_shackleford")){
+
+    # Very simple reservoir simulation
+
+    #Convert values to AF per day
+    stm_AFday = subws_inflows$irr
+    dates = subws_inflows$irr$Day
+    m3day_to_AFday = 1/4046.86 * 3.28084
+
+    convert_these_columns = grepl(pattern = "m3day", x = colnames(stm_AFday))
+    stm_AFday[,convert_these_columns] = subws_inflows$irr[,convert_these_columns] * m3day_to_AFday
+    #update column names
+    colnames(stm_AFday)[convert_these_columns] =
+      sub("m3day", "AFday" , colnames(stm_AFday)[convert_these_columns])
+
+    #Reservoir parameters
+    cfs_to_AFday = 2.29568411*10^-5 * 86400
+    cfs_goal = 30
+    D_daily = cfs_goal * cfs_to_AFday # Target demand during dry season (fish flow releases)
+    # Assume demand during the dry season is about D_daily cfs for ~121 days (Sep 1 to Dec 31)
+    num_demand_days = as.numeric(diff(as.Date(c("1990-09-01","1990-12-31"))))
+    K = D_daily * num_demand_days # Reservoir capacity. Rough estimate: low-flow releases for dry season.
+
+    #Initialize inflow time series
+    Q = stm_AFday[,grepl(pattern = reservoir_id, x = tolower(colnames(stm_AFday)))]
+    ndays = length(Q) # number of days
+
+    S = rep_len(0, ndays)  # Storage
+    R = rep_len(0, ndays)  # Discharge from reservoir
+    shortage = rep_len(0, ndays)
+
+    if(start_res_full == T){
+      S[1] = K # start simulation at full
+      R[1] = D_daily*num_days[1]  # first month meets demand
+      met_demand = 1  # counter
+    } else {
+      S[1] = 0 # start simulation at empty
+      R[1] = 0 #
+      met_demand = 0  # counter
+    }
+
+
+    for(t in 2:ndays){
+      # new storage: mass balance. Max value is K
+      S[t] = min(S[t-1] + Q[t-1] - R[t-1], K)
+      # Calculate monthly demand
+      D = D_daily
+
+      if(month(dates[t]) %in% c(12, 1:3)){
+        # In Dec-Mar, release the minimum (demand) until the reservoir is full, then let flow bypass reservoir
+        if(S[t] + Q[t] <= K){
+          R[t] = min(D, S[t]+Q[t])               # If storage + inflow is less than capacity, release minimum (D)
+        }else{
+          R[t] = S[t] + Q[t] - K # If storage is full or nearly full, release inflow or fraction of inflow
+        }
+      }
+
+      if(month(dates[t]) %in% 4:8){
+        # In Apr-Aug, let flow bypass reservoir for irrigation (but keep stored volume in reserve)
+        R[t] = Q[t]
+      }
+
+      if(month(dates[t]) %in% 9:11){
+        # In Sep-Nov, release water (no test for low-flow threshold)
+        # release demand amount if enough water is available to meet demand
+        if((S[t] + Q[t]) > D){
+          R[t] = D
+          met_demand = met_demand + 1
+        } else {
+          # release all available water if not enough to meet demand
+          R[t] = S[t] + Q[t]
+        }
+      }
+      # after each month, calculate shortage
+      shortage[t] = max(D - R[t], 0)
+    }
+
+    # Evaluate reservoir performance in terms of meeting flow release target
+    dry_days = sum(month(dates) %in% 9:11) #number of days in which we want to meet demand (Sep 1 - Nov 30, all years)
+    reliability = met_demand / dry_days
+
+    # Plot inflow, discharge, and storage
+    par(mfrow = c(3,1))
+    plot(dates, Q/cfs_to_AFday, type = "l", ylab = "Inflow, cfs") #, log="y", ylim = c(1E-1, 1E3))
+    plot(dates, R/cfs_to_AFday, type = "l", ylab = "Discharge, cfs")
+    plot(dates, S, type = "l", ylab = "Storage, AF", main = paste(reservoir_id, cfs_goal, "cfs demand"))
+
+    # Revise streamflow_input.txt
+
+    # Replace the inflow on the designated tributary with the outflow from the reservoir
+    replace_this_column = grepl(pattern = reservoir_id, x = tolower(colnames(stm_AFday)))
+    stm_AFday[,replace_this_column] = R # convert to AF/day
+
+    #Convert back to m3day
+    stm_m3day = stm_AFday
+    stm_m3day[,convert_these_columns] = stm_AFday[,convert_these_columns] / m3day_to_AFday
+    #update column names
+    colnames(stm_m3day)[convert_these_columns] =
+      sub( "AFday", "m3day", colnames(stm_AFday)[convert_these_columns])
+
+    subws_inflows$irr = stm_m3day
+    # write.table(stm_m3day,file = file2, append = F, quote = F, row.names = F, col.names = T, sep = '\t')
+
+  } else {
+
+    stop(paste('Unrecognized scenario:',scenario_id,
+               '. Must be one of "basecase","none","eflows25_div_lims",
+               "reservoir_s_fork","reservoir_french","reservoir_etna",
+               "reservoir_shackleford"'))
   }
 
 
@@ -759,114 +871,6 @@ alter_trib_inflows_for_reservoir <- function(sfr_component,
   }
 
   write_SWBM_file(sfr_component, output_dir, filename, verbose)
-
-
-
-
-
-
-
-  stm = read.table(file1, header = T)
-
-  # Very simple reservoir simulation
-
-  #Convert values to AF per day
-  stm_AFday = stm
-  m3day_to_AFday = 1/4046.86 * 3.28084
-
-  convert_these_columns = grepl(pattern = "m3day", x = colnames(stm_AFday))
-  stm_AFday[,convert_these_columns] = stm[,convert_these_columns] * m3day_to_AFday
-  #update column names
-  colnames(stm_AFday)[convert_these_columns] =
-    sub("m3day", "AFday" , colnames(stm_AFday)[convert_these_columns])
-
-  #Reservoir parameters
-  cfs_to_AFday = 2.29568411*10^-5 * 86400
-  cfs_goal = 30
-  D_daily = cfs_goal * cfs_to_AFday # Target demand during dry season (fish flow releases)
-  # Assume demand during the dry season is about 20 cfs for ~150 days (July 1 to Dec 1)
-  K = D_daily * 150 # Reservoir capacity. Rough estimate: low-flow releases for dry season.
-  # TO DO: check how realistic this would be (6 TAF capacity?)
-
-  #Initialize inflow time series
-  Q_daily_avg = stm_AFday[,grepl(pattern = reservoir_scenario, x = colnames(stm_AFday))]
-  Q = Q_daily_avg * num_days # convert to monthly volume, AF/month
-  nmonth = length(Q) # number of months
-
-  S = rep_len(0, nmonth)  # Storage
-  R = rep_len(0, nmonth)  # Discharge from reservoir
-  shortage = rep_len(0, nmonth)
-
-  # S[1] = K # start simulation at full
-  # R[1] = D_daily*num_days[1]  # first month meets demand
-  # met_demand = 1  # counter
-
-  S[1] = 0 # start simulation at empty
-  R[1] = 0 #
-  met_demand = 0  # counter
-
-
-  for(t in 2:nmonth){
-
-    # new storage: mass balance. Max value is K
-    S[t] = min(S[t-1] + Q[t-1] - R[t-1], K)
-    # Calculate monthly demand
-    D = D_daily*num_days[t]
-
-    if(t%%12 %in% 0:3){
-      # In Dec-Mar, release the minimum (demand) until the reservoir is full, then let flow bypass reservoir
-      if(S[t] + Q[t] <= K){
-        R[t] = min(D, S[t]+Q[t])               # If storage + inflow is less than capacity, release minimum (D)
-      }else{
-        R[t] = S[t] + Q[t] - K # If storage is full or nearly full, release inflow or fraction of inflow
-      }
-    }
-
-    if(t%%12 %in% 4:6){
-      # In Apr-June, let flow bypass reservoir for irrigation (but keep stored volume in reserve)
-      R[t] = Q[t]
-    }
-
-    if(t%%12 %in% 7:11){
-      # In July-Nov, release water (no test for low-flow threshold)
-      # release demand amount if enough water is available to meet demand
-      if((S[t] + Q[t]) > D){
-        R[t] = D
-        met_demand = met_demand + 1
-      } else {
-        # release all available water if not enough to meet demand
-        R[t] = S[t] + Q[t]
-      }
-    }
-    # after each month, calculate shortage
-    shortage[t] = max(D - R[t], 0)
-  }
-
-  # Evaluate reservoir performance in terms of meeting flow release target
-  dry_months = sum(1:nmonth%%12 %in% 7:11) #number of months in which we want to meet demand
-  reliability = met_demand / dry_months
-
-  # Plot inflow, discharge, and storage
-  plot(model_months, Q/num_days/cfs_to_AFday, type = "l", ylab = "Inflow, cfs")
-  plot(model_months, R/num_days/cfs_to_AFday, type = "l", ylab = "Discharge, cfs")
-  plot(model_months, S, type = "l", ylab = "Storage, AF", main = paste(reservoir_scenario, cfs_goal, "cfs demand"))
-
-  # Revise streamflow_input.txt
-
-  # Replace the inflow on the designated tributary with the outflow from the reservoir
-  replace_this_column = grepl(pattern = reservoir_scenario, x = colnames(stm_AFday))
-  stm_AFday[,replace_this_column] = R / num_days # convert to AF/day
-
-  #Convert back to m3day
-  stm_m3day = stm_AFday
-  stm_m3day[,convert_these_columns] = stm_AFday[,convert_these_columns] / m3day_to_AFday
-  #update column names
-  colnames(stm_m3day)[convert_these_columns] =
-    sub( "AFday", "m3day", colnames(stm_AFday)[convert_these_columns])
-
-
-  write.table(stm_m3day,file = file2, append = F, quote = F, row.names = F, col.names = T, sep = '\t')
-
 }
 
 
@@ -1842,8 +1846,8 @@ apply_native_veg_ET_override <- function(et_list,
 #' @param end_date   Date. Model end date for the last stress period.
 #' @param mar_scenario Character. Which 2024 MAR scenario to use:
 #'   \describe{
-#'     \item{\code{"basecase"}}{Historical MAR volumes for WY2024, from \code{MAR_24basecase.csv}.}
-#'     \item{\code{"max24"}}{Maximum-diversion MAR volumes for WY2024, from \code{MAR_24max.csv}.}
+#'     \item{\code{"basecase"}}{Historical MAR volumes for WY2024, from \code{MAR_2024basecase.csv}.}
+#'     \item{\code{"max24"}}{Maximum-diversion MAR volumes for WY2024, from \code{MAR_2024max.csv}.}
 #'     \item{\code{"none"}}{Returns a MAR table of 0.0 for every stress period.}
 #'   }
 #'
@@ -1866,7 +1870,7 @@ apply_native_veg_ET_override <- function(et_list,
 create_MAR_depth_df <- function(start_date, end_date, mar_scenario) {
 
   if(mar_scenario != "basecase"){
-    recognized_scenarios=c('none','maxMAR_fields24','maxMAR_fields24_2024only')
+    recognized_scenarios=c('none','maxMAR_fields2024','maxMAR_fields2024_2024only')
     if(!(tolower(mar_scenario) %in% tolower(recognized_scenarios))){
       stop("Warning: specified MAR scenario not recognized.")
     }
@@ -1878,26 +1882,26 @@ create_MAR_depth_df <- function(start_date, end_date, mar_scenario) {
 
   if (mar_scenario=='basecase') {
     # Read in 2024 MAR (see .\Scripts\Stored_Analyses\2024_MAR.R)
-    mar24 <- read.table(file.path(data_dir["ref_data_dir","loc"], 'MAR_24basecase.csv'), header=T)
+    mar24 <- read.table(file.path(data_dir["ref_data_dir","loc"], 'MAR_2024basecase.csv'), header=T)
     mar24$Stress_Period <- as.Date(mar24$Stress_Period)
 
     # Remove rows in mar_df that match the Stress_Periods, then combine
     mar_df <- mar_df[!mar_df$Stress_Period %in% c(mar24$Stress_Period),]
     mar_df <- rbind(mar_df, mar24)
-  } else if (mar_scenario=='maxMAR_fields24_2024only') {
+  } else if (mar_scenario=='maxMAR_fields2024_2024only') {
     # Read in 2024 MAR (see .\Scripts\Stored_Analyses\2024_MAR.R)
-    mar24 <- read.table(file.path(data_dir["ref_data_dir","loc"], 'MAR_24max.csv'), header=T)
+    mar24 <- read.table(file.path(data_dir["ref_data_dir","loc"], 'MAR_2024max.csv'), header=T)
     mar24$Stress_Period <- as.Date(mar24$Stress_Period)
 
     # Remove rows in mar_df that match the Stress_Periods, then combine
     mar_df <- mar_df[!mar_df$Stress_Period %in% c(mar24$Stress_Period), ]
     mar_df <- rbind(mar_df, mar24)
-  } else if (mar_scenario=='maxMAR_fields24') {
+  } else if (mar_scenario=='maxMAR_fields2024') {
     # Repeats the maximum permitted divertable MAR for 2024, on the fields
     # used for the MAR 2024 pilot project, and applies that MAR to all water years
 
     # Read in 2024 MAR (see .\Scripts\Stored_Analyses\2024_MAR.R)
-    mar24 <- read.table(file.path(data_dir["ref_data_dir","loc"], 'MAR_24max.csv'), header=T)
+    mar24 <- read.table(file.path(data_dir["ref_data_dir","loc"], 'MAR_2024max.csv'), header=T)
     mar24$Stress_Period <- as.Date(mar24$Stress_Period)
     # assumes one water year of MAR reported
     repetition_indices = rep(1:12, ceiling( nrow(mar_df)/12))[1:nrow(mar_df)]

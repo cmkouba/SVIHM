@@ -9,7 +9,7 @@ library(sf)
 
 # Scenario Settings -----------------------------------------------------
 scen <- list(
-  'name'             = 'eflows25_div_lims',     # Scenario name, will be part of directory name
+  'name'             = 'reservoir_french',     # Scenario name, will be part of directory name
   'type'             = 'update',       # Basecase, Update, or PRMS - where to get meteorological inputs
   'landcover_id'     = 'basecase',     # Landcover scenario identifier
   'curtail_id'       = 'basecase',     # curtailment scenario identifier
@@ -18,7 +18,7 @@ scen <- list(
   'natveg_rd'        = 2.4384,         # Native vegetation rooting depth (m), default = 2.4384 (8 ft)
   'natveg_rd_mult'   = 1.4,
   'natveg_extD'      = 0.5,             # Native vegetation extinction depth (m), default 0.5
-  'stream_inflow_id' = "emergency_flows_2025" # non-irr flows taken from https://www.waterboards.ca.gov/drought/scott_shasta_rivers/docs/2025/2025-0117-01EE-approval.pdf
+  'reservoir_id' = "french"            # Reservoir details (which tributary, potentially volume and fall release rate if diff. from default)
 )
 
 # ------------------------------------------------------------------------------------------------#
@@ -55,8 +55,10 @@ subws_inflows <- process_sfr_inflows(scen, subws_inflow_filename)
 # alterations to total inflows or non-irrigation flow designations
 subws_inflows = alter_SWBM_sfr_inflows(subws_inflows = subws_inflows,
                                        scenario_id = scen$name,
+                                       reservoir_id = scen$reservoir_id,
                                        min_flow_file_name = file.path(data_dir["ref_data_dir","loc"],
-                                                                      "Scott River 2025 Drought Emergency Minimum Flows.csv") )
+                                                                      "Scott River 2025 Drought Emergency Minimum Flows.csv"),
+                                       num_days = scen$num_days)
 
 # Land use by field by month
 # Valid scenario_ids are basecase, nv_gw_mix, and nv_all

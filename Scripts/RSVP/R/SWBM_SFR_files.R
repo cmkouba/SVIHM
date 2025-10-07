@@ -165,16 +165,7 @@ streamflow_curtailment <- function(flows,
       # assign to output variables
       irr[,stream] = trib_comparison$irr_out
       non_irr[,stream] = trib_comparison$non_irr_out
-
-      # currently finalizing
-
     }
-
-    # Assign min(min_flow, irr) to non-irr
-
-
-
-    # subtract min flows from irr (or set to 0)
   }
 
   # return updated list

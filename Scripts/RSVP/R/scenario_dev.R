@@ -114,6 +114,8 @@ scenario_setup <- function(scen, start_year=1991) {
   if(!("landcover_id" %in% names(scen))){scen$landcover_id = "basecase"}
   # Specify scenario for stream inflow (and any flows designated for non-irrigation, in-stream environmental uses)
   if(!("stream_inflow_id" %in% names(scen))){scen$stream_inflow_id = "basecase"}
+  # Specify reservoir scenario details
+  if(!("reservoir_id" %in% names(scen))){scen$reservoir_id = NA}
 
   return(scen)
 }
