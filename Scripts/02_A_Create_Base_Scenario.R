@@ -63,7 +63,7 @@ subws_inflows = alter_SWBM_sfr_inflows(subws_inflows, scen$name)
 # Land use by field by month
 # Valid scenario_ids are basecase, nv_gw_mix, and nv_all
 landcover_df <- create_SWBM_landcover_df(scenario_id = scen$name,
-                                         landcover_category = scen$landcover_id,
+                                         landcover_id = scen$landcover_id,
                                          scen$start_date,
                                          scen$end_date,
                                          polygon_fields,
@@ -89,7 +89,6 @@ daily_kc_df <- create_daily_crop_coeff_df(scen$start_date, scen$end_date, natveg
 
 # MAR applications by field by month
 mar_depth_df <- create_MAR_depth_df(scen$start_date, scen$end_date,
-                                    scenario_id = scen$name,
                                     mar_scenario = scen$mar_id)
 
 # Mountain Front Recharge (water passed through SWBM to MODFLOW)
@@ -98,7 +97,6 @@ mfr_df <- create_SWBM_MFR_df(num_days_df)
 # Irrigation curtailment fractions (as fraction of calculated demand) by field by month
 # Also includes Local Cooperative Solutions (LCSs) that reduce water use (implemented as curtailment)
 curtail_df <- create_SWBM_curtailment_df(scen$start_date, scen$end_date,
-                                         scenario_id= scen$name,
                                          curtail_id = scen$curtail_id)
 
 # ET Correction file

@@ -13,8 +13,8 @@ create_MAR_depth_df(start_date, end_date, mar_scenario)
 
 \item{mar_scenario}{Character. Which 2024 MAR scenario to use:
 \describe{
-\item{\code{"basecase"}}{Historical MAR volumes for WY2024, from \code{MAR_24basecase.csv}.}
-\item{\code{"max24"}}{Maximum-diversion MAR volumes for WY2024, from \code{MAR_24max.csv}.}
+\item{\code{"basecase"}}{Historical MAR volumes for WY2024, from \code{MAR_2024basecase.csv}.}
+\item{\code{"max24"}}{Maximum-diversion MAR volumes for WY2024, from \code{MAR_2024max.csv}.}
 \item{\code{"none"}}{Returns a MAR table of 0.0 for every stress period.}
 }}
 }

@@ -8,7 +8,10 @@ alter_SWBM_sfr_inflows(
   subws_inflows,
   scenario_id,
   min_flow_file_name = NA,
-  rerun_FJ_trib_corr = F
+  rerun_FJ_trib_corr = F,
+  reservoir_id = NA,
+  num_days = NULL,
+  start_res_full = F
 )
 }
 \arguments{

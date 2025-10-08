@@ -9,7 +9,7 @@ library(sf)
 
 # Scenario Settings -----------------------------------------------------
 scen <- list(
-  'name'             = 'irr_eff_0.1',    # Scenario name, will be part of directory name
+  'name'             = 'reservoir_shackleford',     # Scenario name, will be part of directory name
   'type'             = 'update',       # Basecase, Update, or PRMS - where to get meteorological inputs
   'landcover_id'     = 'basecase',     # Landcover scenario identifier
   'curtail_id'       = 'basecase',     # curtailment scenario identifier
@@ -17,14 +17,15 @@ scen <- list(
   'natveg_kc'        = 0.6,            # Native vegetation daily ET coefficient, default = 0.6
   'natveg_rd'        = 2.4384,         # Native vegetation rooting depth (m), default = 2.4384 (8 ft)
   'natveg_rd_mult'   = 1.4,
-  'natveg_extD'      = 0.5,            # Native vegetation extinction depth (m), default 0.5
-  'irr_eff_change'   = 0.1             # Blanket increase (or decrease) in irrigation efficiency
+  'natveg_extD'      = 0.5,             # Native vegetation extinction depth (m), default 0.5
+  'reservoir_id' = "shackleford"            # Reservoir details (which tributary, potentially volume and fall release rate if diff. from default)
 )
+
 # ------------------------------------------------------------------------------------------------#
 
 # Scenario Processing -------------------------------------------------------------------------
 
-# Create default items to scen related to scen$type
+# Add default items to scen related to scen$type
 scen <- scenario_setup(scen)
 
 # Create working directory
@@ -50,65 +51,66 @@ num_days_df <-  data.frame("stress_period" = 1:scen$num_stress_periods, ndays = 
 #-- Streamflow
 subws_inflow_filename <- file.path(scen$input_dir,"daily_tributary_streamflow.txt")
 subws_inflows <- process_sfr_inflows(scen, subws_inflow_filename)
-
-# Historical Streamflow Curtailments for 2021, 2022
-subws_inflows <- streamflow_curtailment(subws_inflows, percent = 1, date_start = "2021-09-10", date_end = "2021-10-25")
-subws_inflows <- streamflow_curtailment(subws_inflows, percent = 1, date_start = "2022-07-01", date_end = "2022-12-27")
+# Apply basecase surface diversion curtailments in two years or make scenario-specific
+# alterations to total inflows or non-irrigation flow designations
+subws_inflows = alter_SWBM_sfr_inflows(subws_inflows = subws_inflows,
+                                       scenario_id = scen$name,
+                                       reservoir_id = scen$reservoir_id,
+                                       min_flow_file_name = file.path(data_dir["ref_data_dir","loc"],
+                                                                      "Scott River 2025 Drought Emergency Minimum Flows.csv"),
+                                       num_days = scen$num_days)
 
 # Land use by field by month
 # Valid scenario_ids are basecase, nv_gw_mix, and nv_all
 landcover_df <- create_SWBM_landcover_df(scenario_id = scen$name,
                                          landcover_id = scen$landcover_id,
-                                         start_date = scen$start_date,
-                                         end_date = scen$end_date,
-                                         poly_df = polygon_fields,
-                                         landcover_df = landcover_desc
-                                         )
+                                         scen$start_date,
+                                         scen$end_date,
+                                         polygon_fields,
+                                         landcover_desc)
 
 # ET (both which cells have ET, and the extinction depths) Returns a list of matrices (by MODFLOW cell)
 cell_et <- read_SWBM_ET_inputs(file_cells = file.path(data_dir["time_indep_dir","loc"], "ET_Zone_Cells.txt"),
                                       file_ext_depth = file.path(data_dir["time_indep_dir","loc"], "ET_Cells_Extinction_Depth.txt"))
 
 # Matrix mapping SWBM fields to MODFLOW cells
-cell_recharge  <- as.matrix(read.table(header = F,  file = file.path(data_dir["time_indep_dir","loc"], "recharge_zones.txt")))
+#cell_recharge  <- as.matrix(read.table(header = F,  file = file.path(data_dir["time_indep_dir","loc"], "recharge_zones.txt")))
 
-# Update Landcover Description Table
-# Native Vegetation Rooting Depth
+# Read Field-Cell (SWBM-MODFLOW) overlap file
+cell_overlap <- read.table(file.path(data_dir['time_indep_dir','loc'], 'MF_Polygon_Overlaps.txt'), header=T)
+
+# Update Native Vegetation Rooting Depth
 nat_id <- landcover_desc[landcover_desc['Landcover_Name']=='Native_Vegetation', 'id']
 landcover_desc[nat_id, 'RootDepth'] <- scen$natveg_rd
 landcover_desc[nat_id, 'RD_Mult'] <- scen$natveg_rd_mult
-# Irrigation efficiency changes
-if(!is.na(scen$irr_eff_change)){
-  landcover_desc$IrrEff_Flood[landcover_desc$IrrEff_Flood>0] = # add irrigation change to all non-0 efficiencies
-    landcover_desc$IrrEff_Flood[landcover_desc$IrrEff_Flood>0] + scen$irr_eff_change
-  landcover_desc$IrrEff_WL[landcover_desc$IrrEff_WL>0] = # add irrigation change to all non-0 efficiencies
-    landcover_desc$IrrEff_WL[landcover_desc$IrrEff_WL>0] + scen$irr_eff_change
-  landcover_desc$IrrEff_CP[landcover_desc$IrrEff_CP>0] = # add irrigation change to all non-0 efficiencies
-    landcover_desc$IrrEff_CP[landcover_desc$IrrEff_CP>0] + scen$irr_eff_change
-}
-
 
 #-- Crop coefficients (specified daily, change seaonally for some crops)
 daily_kc_df <- create_daily_crop_coeff_df(scen$start_date, scen$end_date, natveg_kc=scen$natveg_kc)
 
+# MAR applications by field by month
+mar_depth_df <- create_MAR_depth_df(scen$start_date, scen$end_date,
+                                    mar_scenario = scen$mar_id)
+
 # Mountain Front Recharge (water passed through SWBM to MODFLOW)
 mfr_df <- create_SWBM_MFR_df(num_days_df)
 
-# Scenario contains no MAR or LCS interventions
-mar_depth_df <- create_MAR_depth_df(scen$start_date, scen$end_date, mar_scenario=scen$mar_id)
-curtail_df <- create_SWBM_curtailment_df(scen$start_date, scen$end_date, curtail_id = scen$curtail_id)
-et_corr <- create_SWBM_ET_correction_df(scen$start_date, scen$end_date, scenario_id='none')
+# Irrigation curtailment fractions (as fraction of calculated demand) by field by month
+# Also includes Local Cooperative Solutions (LCSs) that reduce water use (implemented as curtailment)
+curtail_df <- create_SWBM_curtailment_df(scen$start_date, scen$end_date,
+                                         curtail_id = scen$curtail_id)
+
+# ET Correction file
+# Includes LCSs that essentially reduce evaporated water losses
+et_corr <- create_SWBM_ET_correction_df(scen$start_date, scen$end_date, scenario_id='basecase')
 
 # Scenario-specific commands (please read documentation of commands) - Uncomment if desired
 # polygon_fields <- SWBM_no_pumping(polygon_fields)
-# cell_et <- apply_native_veg_ET_override(cell_et, cell_recharge, landcover_df, landcover_desc, scen$natveg_extD)
-
-# 100% Curtailment all the time
-curtail_df <- SWBM_monthly_curtailment(curtail_df, scen$start_date, scen$end_date, percent=1)
+# cell_et <- apply_native_veg_ET_override(cell_et, cell_overlap, landcover_df, landcover_desc, scen$natveg_extD)
+# curtail_df <- SWBM_monthly_curtailment(curtail_df, date_start, date_end)
 
 # Optional: Plots for QA/QC
 # plot_landcover(landcover_df, landcover_desc, stress_period="1990-10-01")
-# plot_curtailment(curtail_df, stress_period="1995-08-01")
+# plot_curtailment(curtail_df, stress_period="2024-08-01")
 # plot_field_continuous(et_corr, stress_period="2024-08-01", plot_title=paste('ET Correction 2024-08-01'))
 # plot_field_continuous(mar_depth_df, stress_period="2024-03-01", plot_title=paste('MAR Depth 2024-03-01'))
 
