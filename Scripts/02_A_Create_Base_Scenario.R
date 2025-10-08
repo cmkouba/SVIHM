@@ -55,11 +55,6 @@ subws_inflows <- process_sfr_inflows(scen, subws_inflow_filename)
 # alterations to total inflows or non-irrigation flow designations
 subws_inflows = alter_SWBM_sfr_inflows(subws_inflows, scen$name)
 
-# analysis of what constitutes "low flows". try multiple thresholds?
-# do all trib flows go low together at the same time? if so could do threshold of combined trib inflows
-# Might need a new function. low flow curtailment and/or just guaranteed E-flows preserved. For the 2nd one,
-# going to need some analysis of which trib flows correspond to which flows an the FJ gauge.
-
 # Land use by field by month
 # Valid scenario_ids are basecase, nv_gw_mix, and nv_all
 landcover_df <- create_SWBM_landcover_df(scenario_id = scen$name,
