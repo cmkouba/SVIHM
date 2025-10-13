@@ -866,6 +866,7 @@ streamflow_maps <- function(mf_dir, out_dir,
 #' @param out_dir Character string. Directory path where the output plots should be saved.
 #' @param plot_type Character string. Type of plot to generate, either "monthly" or "yearly". Defaults to "monthly".
 #' @param write_csv Logical. If TRUE, writes the SWBM data to a CSV file. Defaults to TRUE.
+#' @param scenario_id Character string. Name of scenario for which results are being plotted. Defaults to NA.
 #' @param swbm_terms Character vector. The terms (components) of the SWBM volumetric budget to plot. Defaults to c('Precipitation', 'SW Irrigation', 'GW Irrigation', 'ET', 'Recharge', 'Runoff', 'Storage', 'Error').
 #' @param swbm_colors Character vector. Colors for each term in the plot. Defaults to c('lightblue1', 'darkcyan', 'midnightblue', 'goldenrod', 'green4', 'mistyrose', 'black', 'gray').
 #' @param origin_date Date. The starting date for the SWBM model run. Defaults to as.Date('1990-09-30').
@@ -892,6 +893,7 @@ streamflow_maps <- function(mf_dir, out_dir,
 plot_swbm_volumetric_budget <- function(swbm_dir, out_dir,
                                         plot_type = c("monthly", "yearly"),
                                         write_csv = TRUE,
+                                        scenario_id = NA,
 
                                         swbm_terms = c('Precipitation', 'SW Irrigation', 'GW Irrigation', 'ET',
                                                        'Recharge', 'Runoff', 'Storage', 'Error'),
@@ -906,8 +908,18 @@ plot_swbm_volumetric_budget <- function(swbm_dir, out_dir,
   swbm_data <- read.table(file.path(swbm_dir, 'monthly_water_budget.dat'), header = TRUE)
   names(swbm_data) <- swbm_columns
 
+  if(is.na(scenario_id)){
+    budget_file_name = paste0("SWBM_", plot_type, "_Budget.csv")
+    annual_plot_file_name = "SWBM_Budget_Annual_Barplot.pdf"
+    monthly_plot_file_name = "SWBM_Budget_Monthly_Lineplots.pdf"
+  } else {
+    budget_file_name = paste0(scenario_id,"_SWBM_", plot_type, "_Budget.csv")
+    annual_plot_file_name = paste0(scenario_id,"_SWBM_Budget_Annual_Barplot.pdf")
+    monthly_plot_file_name = paste0(scenario_id,"_SWBM_Budget_Monthly_Lineplots.pdf")
+  }
+
   if (write_csv) {
-    write.csv(swbm_data, file = file.path(out_dir, paste0("SWBM_", plot_type, "_Budget.csv")), row.names = FALSE, quote = FALSE)
+    write.csv(swbm_data, file = file.path(out_dir, budget_file_name), row.names = FALSE, quote = FALSE)
   }
 
   # Process dates for plotting
@@ -930,7 +942,7 @@ plot_swbm_volumetric_budget <- function(swbm_dir, out_dir,
       scale_fill_manual(values = swbm_colors, name="Budget Term") +
       theme_minimal()
 
-    ggsave(filename = file.path(out_dir, "SWBM_Budget_Annual_Barplot.pdf"), plot = swbm_plot, width = 11, height = 8.5)
+    ggsave(filename = file.path(out_dir, annual_plot_file_name), plot = swbm_plot, width = 11, height = 8.5)
   } else if (plot_type == "monthly") {
     # Data is already monthly...
 
@@ -939,7 +951,7 @@ plot_swbm_volumetric_budget <- function(swbm_dir, out_dir,
     swbm_monthly_melt$variable <- factor(swbm_monthly_melt$variable, levels = swbm_terms)
 
     # Create the monthly plot
-    pdf(file = file.path(out_dir, "SWBM_Budget_Monthly_Lineplots.pdf"), width = 8.5, height = 11 / 2)
+    pdf(file = file.path(out_dir, monthly_plot_file_name), width = 8.5, height = 11 / 2)
     for (wy in unique(swbm_data$WY)) {
       datelims <- range(swbm_data$Date[swbm_data$WY == wy])
       swbm_plot <- ggplot(swbm_monthly_melt[swbm_monthly_melt$WY == wy, ], aes(x = Date, y = value / 1E6, color = variable)) +

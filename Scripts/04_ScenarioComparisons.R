@@ -97,9 +97,48 @@ names(fj_comb) <- paste0(c('Date_',''), rep(scen_names, rep(2,length(scen_names)
 names(fj_comb)[1] <- 'Date'
 write.csv(fj_comb[,c('Date',scen_names)], file.path(out_dir,'scen_combined_fj.csv'), row.names = F)
 
+write_each_scen_as_own_file = F
+if(write_each_scen_as_own_file == T){
+  func_flow_dir = "C:/Users/ck798/Documents/GitHub/Func_Flows_2025/python-flow-calculator/user_input_files"
+  for(i in 1:length(scen_names)){
+    scen_name = scen_names[i]
+    fj_scen = data.frame(
+      date = format(fj_comb$Date, format = "%m/%d/%Y"),
+      flow = fj_comb[,scen_name])
+    write.csv(fj_scen,
+              file.path(func_flow_dir, paste0('fj_',scen_name,'.csv')), row.names = F, quote = F)
+  }
+
+  # write summary table, for batch func flow processing
+  paths = file.path(func_flow_dir, paste0('fj_',scen_names,".csv"))
+  summary_df = data.frame(usgs = "", cdec = "",
+                          path = paths,
+                          comid="",
+                          class = "",
+                          lat = 41.64065586831092,
+                          lng = -123.01500919353471,
+                          calculator = "Flashy")
+  summary_df_obs = data.frame(usgs = "11519500", cdec="", path = "", comid="",
+                              class = "LSR", lat = "", lng = "",
+                              calculator = "Flashy")
+  summary_df = rbind(summary_df, summary_df_obs)
+  write.csv(summary_df,
+            file = file.path(func_flow_dir, "fj_scen_func_flows_batch_2025.10.13.csv"),
+            row.names = F, quote = F)
+
+
+
+}
+
 #-------------------------------------------------------------------------------------------------#
 
 #-------------------------------------------------------------------------------------------------#
+
+
+# Scenario parameter summary table ----------------------------------------
+
+
+
 # Summarize parameters in svihm_parameter_table
 scen_update_dirs = list.dirs(path = out_dir,
                              recursive = F)[!grepl(pattern = "Run",
@@ -139,4 +178,81 @@ mf_budgets <- lapply(models_to_compare, function(x) {
   bud <- rmf_read_budget(file.path(scen_dirs[x],'MODFLOW/SVIHM.lst'))
   return(bud)
 })
+
+
+# Export SWBM Budgets -----------------------------------------------------------------
+
+scen_results_dirs = list.dirs(path = out_dir,
+                             recursive = F)[grepl(pattern = "Run",
+                                                   x = list.dirs(path=out_dir,
+                                                                 recursive = F))]
+
+scen_param_summary_tab = read.csv(file.path(out_dir,"scenarios_param_summary.csv"))
+budget_results_dir = file.path(out_dir, "Scenario Results_Budgets")
+
+if(!dir.exists(budget_results_dir)){dir.create(budget_results_dir)}
+
+for(i in 1:nrow(scen_param_summary_tab)){
+  scen_swbm_dir = file.path(out_dir,
+                            paste0("Run_",scen_param_summary_tab$full_name[i]),
+                            "SWBM")
+  scen_id = scen_param_summary_tab$name[i]
+
+  plot_swbm_volumetric_budget(swbm_dir=scen_swbm_dir,
+                              out_dir=budget_results_dir,
+                              plot_type = "monthly",
+                              write_csv = TRUE,
+                              scenario_id = scen_id)
+}
+
+
+# Export MODFLOW Budgets -----------------------------------------------------------------
+
+
+# Volumetric Budget - MF -------------------------------------------------------
+
+postprocess_MF_budgets =  F
+if(postprocess_MF_budgets == T){
+  for(i in 1:nrow(scen_param_summary_tab)){
+    scen_mf_dir = file.path(out_dir,
+                            paste0("Run_",scen_param_summary_tab$full_name[i]),
+                            "MODFLOW")
+    scen_id = scen_param_summary_tab$name[i]
+
+    mfnam <- rmf_read_nam(file.path(scen_mf_dir,'SVIHM.nam'))
+    mfdis <- rmf_read_dis(file.path(scen_mf_dir,'SVIHM.dis'), nam=mfnam)
+    bud <- rmf_read_budget(file.path(scen_mf_dir,'SVIHM.lst'))
+
+    bc = bud$cumulative
+
+    # generate table to store monthly cumulative results
+    bud_monthly_init = bc[1,]
+    bud_monthly_init[1,] = NA
+    budget_cols = colnames(bc)[!(colnames(bc) %in% c("kstp","kper"))]
+
+    for(sp in 1:max(bc$kper)){
+      bud_monthly_sp = bud_monthly_init
+      max_kstp_for_month = max(bc$kstp[bc$kper==sp])
+      max_row_i = which(bud$cumulative$kper == sp &
+                          bud$cumulative$kstp==max_kstp_for_month)
+      bud_monthly_sp = bc[max_row_i, ]
+
+      if(sp==1){
+        bud_monthly_cum = bud_monthly_sp
+        bud_monthly_rates = bud_monthly_sp
+      } else {
+        bud_monthly_cum = rbind(bud_monthly_cum, bud_monthly_sp)
+        bud_monthly_rates = rbind(bud_monthly_rates, bud_monthly_sp)
+        diffs = bud_monthly_sp[,budget_cols] - bud_monthly_rates[sp-1,budget_cols]
+        bud_monthly_rates[sp, budget_cols] = diffs
+      }
+    }
+
+    write.csv(bud_monthly_rates, row.names = F,
+              file = file.path(budget_results_dir, paste0(scen_id, "_MODFLOW Budget m3 per month.csv")))
+  }
+
+}
+
+
 

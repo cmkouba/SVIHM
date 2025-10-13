@@ -9,6 +9,7 @@ plot_swbm_volumetric_budget(
   out_dir,
   plot_type = c("monthly", "yearly"),
   write_csv = TRUE,
+  scenario_id = NA,
   swbm_terms = c("Precipitation", "SW Irrigation", "GW Irrigation", "ET", "Recharge",
     "Runoff", "Storage", "Error"),
   swbm_colors = c("lightblue1", "blueviolet", "midnightblue", "goldenrod", "chartreuse4",
@@ -24,6 +25,8 @@ plot_swbm_volumetric_budget(
 \item{plot_type}{Character string. Type of plot to generate, either "monthly" or "yearly". Defaults to "monthly".}
 
 \item{write_csv}{Logical. If TRUE, writes the SWBM data to a CSV file. Defaults to TRUE.}
+
+\item{scenario_id}{Character string. Name of scenario for which results are being plotted. Defaults to NA.}
 
 \item{swbm_terms}{Character vector. The terms (components) of the SWBM volumetric budget to plot. Defaults to c('Precipitation', 'SW Irrigation', 'GW Irrigation', 'ET', 'Recharge', 'Runoff', 'Storage', 'Error').}
 
