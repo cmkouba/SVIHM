@@ -103,9 +103,6 @@ et_corr <- create_SWBM_ET_correction_df(scen$start_date, scen$end_date, scenario
 # polygon_fields <- SWBM_no_pumping(polygon_fields)
 # cell_et <- apply_native_veg_ET_override(cell_et, cell_recharge, landcover_df, landcover_desc, scen$natveg_extD)
 
-# 100% Curtailment all the time
-curtail_df <- SWBM_monthly_curtailment(curtail_df, scen$start_date, scen$end_date, percent=1)
-
 # Optional: Plots for QA/QC
 # plot_landcover(landcover_df, landcover_desc, stress_period="1990-10-01")
 # plot_curtailment(curtail_df, stress_period="1995-08-01")
