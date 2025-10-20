@@ -99,6 +99,12 @@ scenario_setup <- function(scen, start_year=1991) {
   # Default inputs to account for scenario differences
   # if not already declared in scenario .R script
 
+  # alfalfa irrigation cutoff date
+  if(!("alf_curtail_month" %in% names(scen))){scen$alf_curtail_month = NA}
+  if(!("alf_curtail_day" %in% names(scen))){scen$alf_curtail_day = NA}
+  # ALL irrigation cutoff date
+  if(!("curtail_month" %in% names(scen))){scen$curtail_month = NA}
+  if(!("curtail_day" %in% names(scen))){scen$curtail_day = NA}
   # Native vegetation scenarios - randomly convert irrigated acres to native veg
   if(!("irr_to_natveg_acres" %in% names(scen))){scen$irr_to_natveg_acres = NA}
   # Crop change scenarios - convert acreage to permanent grain

@@ -25,7 +25,7 @@ alf_curtail_date = strsplit(scen$name , split="_")[[1]][3]
 scen$alf_curtail_month = as.numeric(strsplit(alf_curtail_date, split = "[.]")[[1]][1])  # Month of irrigation cutoff date
 scen$alf_curtail_day  = as.numeric(strsplit(alf_curtail_date, split = "[.]")[[1]][2])   # Day of irrigation cutoff date
 
-if(!(scen$alf_curtail_day %in% 1:30) | !(scen$alf_curtail_month %in% 4:9)){
+if(!(scen$alf_curtail_day %in% 1:31) | !(scen$alf_curtail_month %in% 4:9)){
   print("Alfalfa irrigation cutoff date not recognized")
 }
 

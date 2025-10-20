@@ -9,16 +9,25 @@ library(sf)
 
 # Scenario Settings -----------------------------------------------------
 scen <- list(
-  'name'             = 'maxMAR_fields2024',     # Scenario name, will be part of directory name
-  'type'             = 'update',       # Basecase, Update, or PRMS - where to get meteorological inputs
-  'landcover_id'     = 'basecase',     # Landcover scenario identifier
-  'curtail_id'       = 'basecase',     # curtailment scenario identifier
-  'mar_id'           = 'maxMAR_fields2024',     # MAR scenario identifier
-  'natveg_kc'        = 0.6,            # Native vegetation daily ET coefficient, default = 0.6
-  'natveg_rd'        = 2.4384,         # Native vegetation rooting depth (m), default = 2.4384 (8 ft)
+  'name'             = 'curtail_all_07.15',  # Scenario name, will be part of directory name
+  'type'             = 'update',             # Basecase, Update, or PRMS - where to get meteorological inputs
+  'landcover_id'     = 'basecase',           # Landcover scenario identifier
+  'curtail_id'       = 'early_irr_cutoff',   # curtailment scenario identifier
+  'mar_id'           = 'basecase',           # MAR scenario identifier: basecase, none, or max24
+  'natveg_kc'        = 0.6,                  # Native vegetation daily ET coefficient, default = 0.6
+  'natveg_rd'        = 2.4384,               # Native vegetation rooting depth (m), default = 2.4384 (8 ft)
   'natveg_rd_mult'   = 1.4,
-  'natveg_extD'      = 0.5             # Native vegetation extinction depth (m), default 0.5
+  'natveg_extD'      = 0.5                  # Native vegetation extinction depth (m), default 0.5
 )
+
+# Derive alfalfa cutoff month and day from scenario name
+curtail_date = strsplit(scen$name , split="_")[[1]][3]
+scen$curtail_month = as.numeric(strsplit(curtail_date, split = "[.]")[[1]][1])  # Month of irrigation cutoff date
+scen$curtail_day  = as.numeric(strsplit(curtail_date, split = "[.]")[[1]][2])   # Day of irrigation cutoff date
+
+if(!(scen$curtail_day %in% 1:31) | !(scen$curtail_month %in% 4:9)){
+  print("Irrigation cutoff date not recognized")
+}
 
 # ------------------------------------------------------------------------------------------------#
 
@@ -59,20 +68,18 @@ subws_inflows <- streamflow_curtailment(subws_inflows, percent = 1, date_start =
 # Valid scenario_ids are basecase, nv_gw_mix, and nv_all
 landcover_df <- create_SWBM_landcover_df(scenario_id = scen$name,
                                          landcover_id = scen$landcover_id,
-                                         scen$start_date,
-                                         scen$end_date,
-                                         polygon_fields,
-                                         landcover_desc)
+                                         start_date = scen$start_date,
+                                         end_date = scen$end_date,
+                                         poly_df = polygon_fields,
+                                         landcover_df = landcover_desc
+                                         )
 
 # ET (both which cells have ET, and the extinction depths) Returns a list of matrices (by MODFLOW cell)
 cell_et <- read_SWBM_ET_inputs(file_cells = file.path(data_dir["time_indep_dir","loc"], "ET_Zone_Cells.txt"),
                                       file_ext_depth = file.path(data_dir["time_indep_dir","loc"], "ET_Cells_Extinction_Depth.txt"))
 
 # Matrix mapping SWBM fields to MODFLOW cells
-#cell_recharge  <- as.matrix(read.table(header = F,  file = file.path(data_dir["time_indep_dir","loc"], "recharge_zones.txt")))
-
-# Read Field-Cell (SWBM-MODFLOW) overlap file
-cell_overlap <- read.table(file.path(data_dir['time_indep_dir','loc'], 'MF_Polygon_Overlaps.txt'), header=T)
+cell_recharge  <- as.matrix(read.table(header = F,  file = file.path(data_dir["time_indep_dir","loc"], "recharge_zones.txt")))
 
 # Update Native Vegetation Rooting Depth
 nat_id <- landcover_desc[landcover_desc['Landcover_Name']=='Native_Vegetation', 'id']
@@ -82,37 +89,64 @@ landcover_desc[nat_id, 'RD_Mult'] <- scen$natveg_rd_mult
 #-- Crop coefficients (specified daily, change seaonally for some crops)
 daily_kc_df <- create_daily_crop_coeff_df(scen$start_date, scen$end_date, natveg_kc=scen$natveg_kc)
 
-# MAR applications by field by month
-mar_depth_df <- create_MAR_depth_df(start_date = scen$start_date,
-                                    end_date = scen$end_date,
-                                    # scenario_id = scen$name,
-                                    mar_scenario = scen$mar_id)
-# # diagnostics:
-# test1 = matrix(data = unlist(mar_depth_df_bc[, 2:ncol(mar_depth_df_bc)]), nrow = nrow(mar_depth_df_bc))
-# image(test1)
-# test2 = matrix(data = unlist(mar_depth_df[, 2:ncol(mar_depth_df)]), nrow = nrow(mar_depth_df))
-# image(test2)
-
 # Mountain Front Recharge (water passed through SWBM to MODFLOW)
 mfr_df <- create_SWBM_MFR_df(num_days_df)
 
-# Irrigation curtailment fractions (as fraction of calculated demand) by field by month
-# Also includes Local Cooperative Solutions (LCSs) that reduce water use (implemented as curtailment)
-curtail_df <- create_SWBM_curtailment_df(scen$start_date, scen$end_date,
-                                         curtail_id = scen$curtail_id)
-
-# ET Correction file
-# Includes LCSs that essentially reduce evaporated water losses
-et_corr <- create_SWBM_ET_correction_df(scen$start_date, scen$end_date, scenario_id='basecase')
+# Scenario contains no MAR or LCS interventions
+mar_depth_df <- create_MAR_depth_df(scen$start_date, scen$end_date, mar_scenario=scen$mar_id)
+et_corr <- create_SWBM_ET_correction_df(scen$start_date, scen$end_date, scenario_id='none')
 
 # Scenario-specific commands (please read documentation of commands) - Uncomment if desired
 # polygon_fields <- SWBM_no_pumping(polygon_fields)
-# cell_et <- apply_native_veg_ET_override(cell_et, cell_overlap, landcover_df, landcover_desc, scen$natveg_extD)
-# curtail_df <- SWBM_monthly_curtailment(curtail_df, date_start, date_end)
+# cell_et <- apply_native_veg_ET_override(cell_et, cell_recharge, landcover_df, landcover_desc, scen$natveg_extD)
+
+# Curtail Alfalfa Irrigation each year after cutoff date
+# Initial curtailment dataframe
+curtail_df_init <- create_SWBM_curtailment_df(scen$start_date, scen$end_date, curtail_id= "basecase")
+curtail_df = curtail_df_init # save initial basecase df for diagnostics
+# Conceptual Q: Should this curtailment df get modified here in the scenario
+# script? Or tucked away in the creat_swbm_curtailment_df function?
+
+wys = unique(get_water_year(curtail_df_init$Stress_Period))
+for(i in 1:length(wys)){
+  wy = wys[i]
+  # stress periods and rows for each year
+  # identify indices for the growing season for each water year
+  wy_indices = which(wy == get_water_year(curtail_df_init$Stress_Period) &
+                       month(curtail_df_init$Stress_Period) >= 4 &
+                       month(curtail_df_init$Stress_Period) <= 9)
+  months = month(curtail_df_init$Stress_Period[wy_indices])
+  curtail_vector = rep(0, length(wy_indices))
+  # Curtail 100% irrigation in months after cutoff month
+  curtail_vector[months>scen$curtail_month] = 1 # 100% curtailment
+  # Apply partial curtailment fraction to month of cutoff, depending on date
+  num_days_cutoff_month = scen$num_days[wy_indices[months==scen$curtail_month]]
+  curtail_vector[months==scen$curtail_month] = 1 - scen$curtail_day / num_days_cutoff_month
+  curtail_vector = round(curtail_vector, 3)
+  # apply curtailments to relevant months on all fields.
+
+  for(j in 1:length(wy_indices)){
+    stress_period_j = wy_indices[j]
+    curtail_df <- SWBM_monthly_curtailment(curtail_df,
+                                           date_start = curtail_df$Stress_Period[stress_period_j],
+                                           date_end = curtail_df$Stress_Period[stress_period_j],
+                                           percent = curtail_vector[j],
+                                           verbose = F,
+                                           additive = F) # replaces existing basecase curtailment values
+
+  }
+
+}
+
+# # diagnostics:
+# test1 = matrix(data = unlist(curtail_df_init[, 2:ncol(curtail_df_init)]), nrow = nrow(curtail_df_init))
+# image(test1)
+# test2 = matrix(data = unlist(curtail_df[, 2:ncol(curtail_df)]), nrow = nrow(curtail_df))
+# image(test2)
 
 # Optional: Plots for QA/QC
 # plot_landcover(landcover_df, landcover_desc, stress_period="1990-10-01")
-# plot_curtailment(curtail_df, stress_period="2024-08-01")
+# plot_curtailment(curtail_df, stress_period="1995-08-01")
 # plot_field_continuous(et_corr, stress_period="2024-08-01", plot_title=paste('ET Correction 2024-08-01'))
 # plot_field_continuous(mar_depth_df, stress_period="2024-03-01", plot_title=paste('MAR Depth 2024-03-01'))
 
