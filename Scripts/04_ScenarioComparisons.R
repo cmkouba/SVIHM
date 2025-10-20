@@ -97,6 +97,7 @@ names(fj_comb) <- paste0(c('Date_',''), rep(scen_names, rep(2,length(scen_names)
 names(fj_comb)[1] <- 'Date'
 write.csv(fj_comb[,c('Date',scen_names)], file.path(out_dir,'scen_combined_fj.csv'), row.names = F)
 
+# Output scenario flows so they can be analysed for functional flows
 write_each_scen_as_own_file = F
 if(write_each_scen_as_own_file == T){
   func_flow_dir = "C:/Users/ck798/Documents/GitHub/Func_Flows_2025/python-flow-calculator/user_input_files"
@@ -182,34 +183,51 @@ mf_budgets <- lapply(models_to_compare, function(x) {
 
 # Export SWBM Budgets -----------------------------------------------------------------
 
-scen_results_dirs = list.dirs(path = out_dir,
-                             recursive = F)[grepl(pattern = "Run",
-                                                   x = list.dirs(path=out_dir,
-                                                                 recursive = F))]
 
-scen_param_summary_tab = read.csv(file.path(out_dir,"scenarios_param_summary.csv"))
-budget_results_dir = file.path(out_dir, "Scenario Results_Budgets")
+postprocess_SWBM_budgets =  F
 
-if(!dir.exists(budget_results_dir)){dir.create(budget_results_dir)}
+if(postprocess_SWBM_budgets == T){
+  scen_results_dirs = list.dirs(path = out_dir,
+                                recursive = F)[grepl(pattern = "Run",
+                                                     x = list.dirs(path=out_dir,
+                                                                   recursive = F))]
 
-for(i in 1:nrow(scen_param_summary_tab)){
-  scen_swbm_dir = file.path(out_dir,
-                            paste0("Run_",scen_param_summary_tab$full_name[i]),
-                            "SWBM")
-  scen_id = scen_param_summary_tab$name[i]
+  scen_param_summary_tab = read.csv(file.path(out_dir,"scenarios_param_summary.csv"))
+  budget_results_dir = file.path(out_dir, "Scenario Results_Budgets")
 
-  plot_swbm_volumetric_budget(swbm_dir=scen_swbm_dir,
-                              out_dir=budget_results_dir,
-                              plot_type = "monthly",
-                              write_csv = TRUE,
-                              scenario_id = scen_id)
+  if(!dir.exists(budget_results_dir)){dir.create(budget_results_dir)}
+
+  for(i in 1:nrow(scen_param_summary_tab)){
+    scen_swbm_dir = file.path(out_dir,
+                              paste0("Run_",scen_param_summary_tab$full_name[i]),
+                              "SWBM")
+    scen_id = scen_param_summary_tab$name[i]
+
+    plot_swbm_volumetric_budget(swbm_dir=scen_swbm_dir,
+                                out_dir=budget_results_dir,
+                                plot_type = "monthly",
+                                write_csv = TRUE,
+                                scenario_id = scen_id)
+  }
+
+  # copy landuse-based SWBM budget to new folder for manuscript
+
+  budgets_dir = "C:/Users/ck798/Documents/GitHub/Fish-and-Ag-Benefits-MS/Data/SVIHM Model Results_2025.10.13/Budgets"
+  aet_by_lu_file = "monthly_vol_aET_by_landcover.dat"
+  for(i in 1:nrow(scen_param_summary_tab)){
+    scen_swbm_dir = file.path(out_dir,
+                              paste0("Run_",scen_param_summary_tab$full_name[i]),
+                              "SWBM")
+    scen_id = scen_param_summary_tab$name[i]
+    file.copy(from = file.path(scen_swbm_dir, aet_by_lu_file),
+              to = file.path(budgets_dir,
+                             paste0(scen_id, "_", aet_by_lu_file)))
+  }
 }
 
 
+
 # Export MODFLOW Budgets -----------------------------------------------------------------
-
-
-# Volumetric Budget - MF -------------------------------------------------------
 
 postprocess_MF_budgets =  F
 if(postprocess_MF_budgets == T){
