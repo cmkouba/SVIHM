@@ -26,7 +26,7 @@ out_dir = data_dir["scenario_dir","loc"] #file.path("../../")
 scen_folders = list.files(path = out_dir)[grepl(pattern = "Run", x = list.files(path=out_dir))]
 scen_dirs = file.path(out_dir, scen_folders)
 scen_names = gsub(x = scen_folders, pattern = "Run_", replacement="")
-scen_names = gsub(x=scen_names, pattern = " 2025-07-31", replacement="")
+scen_names = gsub(x=scen_names, pattern = " 2025-09-30", replacement="")
 
 if (!dir.exists(out_dir)) {dir.create(out_dir, recursive = T)}
 
